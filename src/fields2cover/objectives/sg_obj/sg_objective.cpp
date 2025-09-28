@@ -25,7 +25,7 @@ double SGObjective::computeCost(const F2CSwathsByCells& swaths) {
 }
 
 double SGObjective::computeCost(const F2CCell& cell) {
-  return computeCost(0.0, 0.0, cell);
+  return computeCost(0.0, 0.0, cell); // always 0.0
 }
 
 double SGObjective::computeCost(const F2CCells& cells) {
@@ -42,6 +42,7 @@ double SGObjective::computeCost(
 double SGObjective::computeCost(
     const F2CCell& c, const F2CSwath& s) {
   return computeCost(c) + computeCost(s);
+ // return  computeCost(s);
 }
 
 double SGObjective::computeCost(

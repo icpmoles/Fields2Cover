@@ -99,6 +99,8 @@ struct Cell : public Geometries<Cell, OGRPolygon, wkbPolygon, LinearRing> {
 
   /// Find the closest point from a point to the border of the field
   Point closestPointOnBorderTo(const Point& p) const;
+
+  Point GeometricCentre(void) const;
 };
 
 template <class T, OGRwkbGeometryType R>

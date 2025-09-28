@@ -64,7 +64,6 @@ int main() {
 
   std::cout << "####### Tutorial 7.2 Decomposition with route planner ######" << std::endl;
 
-
   F2CCells mid_hl = const_hl.generateHeadlands(cells, 1.5 * r_w);
   F2CCells decomp_mid_hl = decomp.decompose(mid_hl);
   F2CCells no_hl = const_hl.generateHeadlands(decomp_mid_hl, 1.5 * r_w);
@@ -73,12 +72,18 @@ int main() {
   f2c::rp::RoutePlannerBase route_planner;
   F2CRoute route = route_planner.genRoute(mid_hl, swaths);
 
+    f2c::Visualizer::figure();
+    f2c::Visualizer::plot(cells);
+    f2c::Visualizer::plot(no_hl);
+    f2c::Visualizer::show();
+
   f2c::Visualizer::figure();
   f2c::Visualizer::plot(cells);
   f2c::Visualizer::plot(no_hl);
   f2c::Visualizer::plot(route);
   f2c::Visualizer::xlim(-5,95);
   f2c::Visualizer::ylim(-5,95);
+
   f2c::Visualizer::save("Tutorial_7_2_route.png");
 
   return 0;

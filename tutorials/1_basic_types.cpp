@@ -26,6 +26,7 @@ int main() {
   // Create an empty point and set its components
   F2CPoint p4;
   p4.setX(3.0);
+  p4.setY(3456.0);
   p4.setZ(-1.0);
   std::cout << "Point 4: " << p4;
   std::cout << ". Its components are: {x: " << p4.getX();
@@ -34,7 +35,7 @@ int main() {
 
   // Create an empty point and import its components
   F2CPoint p5;
-  p5.importFromWkt("POINT (0 4 4)");
+  p5.importFromWkt("POINT (3 4 0)");
   std::cout << "Point 5: " << p5 << std::endl;
 
 
@@ -66,7 +67,7 @@ int main() {
   std::cout << "####### Tutorial 1.4 Initialize a F2CLinearRing ######"
     << std::endl;
 
-  F2CLinearRing ring{F2CPoint(1,1), F2CPoint(1,2), F2CPoint(2,2), F2CPoint(1,1)};
+  F2CLinearRing ring{F2CPoint(1,1), F2CPoint(1,2), F2CPoint(2,2), F2CPoint(2,1)};
   std::cout << "Area of the ring: " << ring.area() << std::endl;
 
   std::cout << std::endl << std::endl;
@@ -115,9 +116,10 @@ int main() {
 
   p_0 *= 1e5;
   std::cout << "Modified p_0: " << p_0 << std::endl;
-  std::cout << "First point in points without modification: "
-    << points.getGeometry(0) << std::endl;
+  std::cout << "First point in points without modification: {x: "
+    << points[0].X() << " , y: " <<  points[0].Y() << "} " << std::endl;
   points.setGeometry(0, p_0);
+
   std::cout << "Modified first point in points: " << points.getGeometry(0) << std::endl;
 
 
@@ -127,7 +129,7 @@ int main() {
 
   f2c::Visualizer::figure();
   f2c::Visualizer::plot(lines);
-  //f2c::Visualizer::show();
+  // f2c::Visualizer::show();
   f2c::Visualizer::save("Tutorial_image.png");
 
   return 0;

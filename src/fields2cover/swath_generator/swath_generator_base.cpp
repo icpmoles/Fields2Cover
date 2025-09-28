@@ -18,7 +18,9 @@ void SwathGeneratorBase::setAllowOverlap(bool value) {
 
 F2CSwaths SwathGeneratorBase::generateBestSwaths(
     f2c::obj::SGObjective& obj, double op_width, const F2CCell& poly) {
-  return generateSwaths(computeBestAngle(obj, op_width, poly), op_width, poly);
+  double best_angle = computeBestAngle(obj, op_width, poly);
+  std::cout << "best_angle: " << best_angle*180.0/3.14 << std::endl;
+  return generateSwaths(best_angle, op_width, poly);
 }
 
 F2CSwathsByCells SwathGeneratorBase::generateBestSwaths(

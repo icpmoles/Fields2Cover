@@ -41,9 +41,10 @@ double BruteForce::computeBestAngle(f2c::obj::SGObjective& obj,
   #else
     std::transform(ids.begin(), ids.end(), costs.begin(), getCostSwaths);
   #endif
-
-  return ids[std::min_element(
-      costs.begin(), costs.end()) - costs.begin()] * step_angle;
+  auto min_el = std::min_element(
+      costs.begin(), costs.end());
+  auto idx = min_el - costs.begin();
+  return ids[idx] * step_angle;
 }
 
 }  // namespace f2c::sg

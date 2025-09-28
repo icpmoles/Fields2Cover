@@ -6,6 +6,8 @@
 
 #include "fields2cover/swath_generator/swath_generator_base.h"
 
+#include "fields2cover/utils/visualizer.h"
+
 namespace f2c::sg {
 
 bool SwathGeneratorBase::getAllowOverlap() const {
@@ -46,16 +48,22 @@ F2CSwaths SwathGeneratorBase::generateSwaths(double angle,
     double op_width, const F2CCell& poly) {
   auto rot_poly {F2CPoint(0.0, 0.0).rotateFromPoint(-angle, poly)};
 
-  double field_height {rot_poly.getHeight()};
+  // double field_height {rot_poly.getHeight()};
   F2CPoint min_point(rot_poly.getDimMinX(), rot_poly.getDimMinY());
-  auto seed_curve = rot_poly.createStraightLongLine(min_point, 0.0);
+  F2CPoint centroid = rot_poly.GeometricCentre();
+  double y_up = rot_poly.getDimMaxY() - centroid.getY();
+  double y_down = centroid.getY() - rot_poly.getDimMinY();
 
+  const F2CLineString seed_curve = rot_poly.createStraightLongLine(centroid, 0.0);
   double curve_y {-0.5 * op_width};
   F2CMultiLineString paths;
-  while (field_height > curve_y + (allow_overlap ? 0.0 : 0.5 * op_width)) {
+  while (std::max(y_up,-y_down) > curve_y + (allow_overlap ? 0.0 : 0.5 * op_width)) {
     curve_y += op_width;
-    paths.addGeometry(F2CPoint(0.0, 0.0).rotateFromPoint(angle,
-        seed_curve + F2CPoint(0.0, curve_y)));
+    auto g_up = seed_curve + F2CPoint(0.0, curve_y);
+    auto g_down = seed_curve + F2CPoint(0.0, -curve_y);
+    paths.addGeometry(F2CPoint(0.0, 0.0).rotateFromPoint(angle,g_up));
+    paths.addGeometry(F2CPoint(0.0, 0.0).rotateFromPoint(angle,g_down));
+
   }
 
   F2CSwaths swaths;

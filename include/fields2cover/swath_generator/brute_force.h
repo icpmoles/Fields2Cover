@@ -22,11 +22,15 @@ class BruteForce : public SwathGeneratorBase {
   double getStepAngle() const;
   void setStepAngle(double d);
 
+  int getOffsetDivisions() const;
+  void setOffsetDivisions(int div);
+
   double computeBestAngle(f2c::obj::SGObjective& obj,
       double op_width, const F2CCell& poly) override;
 
  private:
   double step_angle {boost::math::constants::degree<double>()};  // radians
+  int offset_divisions{100};  // radians
 };
 
 

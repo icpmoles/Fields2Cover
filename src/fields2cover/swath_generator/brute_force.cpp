@@ -23,6 +23,14 @@ void BruteForce::setStepAngle(double d) {
   this->step_angle = d;
 }
 
+int BruteForce::getOffsetDivisions() const {
+return this->offset_divisions;
+}
+
+void BruteForce::setOffsetDivisions(int div) {
+this->offset_divisions = div;
+}
+
 double BruteForce::computeBestAngle(f2c::obj::SGObjective& obj,
     double op_width, const F2CCell& poly) {
   int n = static_cast<int>(

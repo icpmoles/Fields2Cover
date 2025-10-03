@@ -43,8 +43,12 @@ F2CSwathsByCells SwathGeneratorBase::generateSwaths(double angle,
   return swaths;
 }
 
-
 F2CSwaths SwathGeneratorBase::generateSwaths(double angle,
+    double op_width, const F2CCell& poly) {
+  return generateSwaths(angle,0.0, op_width, poly);
+}
+
+F2CSwaths SwathGeneratorBase::generateSwaths(double angle, double offset,
     double op_width, const F2CCell& poly) {
   auto rot_poly {F2CPoint(0.0, 0.0).rotateFromPoint(-angle, poly)};
 
@@ -54,10 +58,10 @@ F2CSwaths SwathGeneratorBase::generateSwaths(double angle,
   double y_up = rot_poly.getDimMaxY() - centroid.getY();
   double y_down = centroid.getY() - rot_poly.getDimMinY();
 
-  const F2CLineString seed_curve = rot_poly.createStraightLongLine(centroid, 0.0);
-  double curve_y {-0.5 * op_width};
+  const F2CLineString seed_curve = rot_poly.createStraightLongLine(F2CPoint(0.0,0.0)+centroid, 0.0);
+  double curve_y {offset - 0.5 * op_width};
   F2CMultiLineString paths;
-  while (std::max(y_up,-y_down) > curve_y + (allow_overlap ? 0.0 : 0.5 * op_width)) {
+  while (std::max(y_up,y_down) > curve_y + (allow_overlap ? 0.0 : 0.5 * op_width)) {
     curve_y += op_width;
     auto g_up = seed_curve + F2CPoint(0.0, curve_y);
     auto g_down = seed_curve + F2CPoint(0.0, -curve_y);

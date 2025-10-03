@@ -31,8 +31,13 @@ class SwathGeneratorBase {
   virtual F2CSwathsByCells generateSwaths(double angle,
       double op_width, const F2CCells& polys);
 
+  virtual F2CSwaths generateSwaths(double angle, double offset,
+    double op_width, const F2CCell& poly);
+
+
   virtual double computeCostOfAngle(f2c::obj::SGObjective& obj,
       double ang, double op_width, const F2CCell& poly);
+
 
   virtual double computeBestAngle(f2c::obj::SGObjective& obj,
       double op_width, const F2CCell& poly) = 0;

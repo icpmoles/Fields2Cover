@@ -5,7 +5,7 @@
 //=============================================================================
 
 
-// #define ALLOW_PARALLELIZATION TRUE
+#define ALLOW_PARALLELIZATION
 #include "fields2cover.h"
 #include <iostream>
 
@@ -19,9 +19,10 @@ int main() {
 
   std::cout << "####### Tutorial 4.1 Brute force swath generator ######" << std::endl;
 
-    f2c::sg::BruteForce bf_sw_gen;
-  // f2c::obj::NSwath n_swath_obj;
+  f2c::sg::BruteForce bf_sw_gen;
+  f2c::obj::NSwath n_swath_obj;
   // bf_sw_gen.setStepAngle(0.001);
+  bf_sw_gen.setOffsetDivisions(50);
   // F2CSwaths swaths_bf_nswath = bf_sw_gen.generateBestSwaths(n_swath_obj, robot.getCovWidth(), no_hl.getGeometry(0));
   //
   //
@@ -32,18 +33,9 @@ int main() {
   // f2c::Visualizer::save("Tutorial_4_1_Brute_force_NSwath.png");
 
 
-  // f2c::obj::SwathLength swathlength_obj;
-  // F2CSwaths swaths_bf_swathlength = bf_sw_gen.generateBestSwaths(swathlength_obj, robot.getCovWidth(), no_hl.getGeometry(0));
-  //
-  //
-  // f2c::Visualizer::figure();
-  // f2c::Visualizer::plot(cells);
-  // f2c::Visualizer::plot(no_hl);
-  // f2c::Visualizer::plot(swaths_bf_swathlength);
-  //  f2c::Visualizer::save("Tutorial_4_1_Brute_force_SwathLength.png");
 
 
-  F2CSwaths swaths_bf_angle = bf_sw_gen.generateSwaths(M_PI/6, robot.getCovWidth(), no_hl.getGeometry(0));
+  F2CSwaths swaths_bf_angle = bf_sw_gen.generateSwaths(M_PI/2, -0.0,robot.getCovWidth(), no_hl.getGeometry(0));
   f2c::Visualizer::figure();
   f2c::Visualizer::plot(cells);
   f2c::Visualizer::plot(no_hl);

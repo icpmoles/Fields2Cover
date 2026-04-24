@@ -33,8 +33,8 @@ int main() {
   // F2CPath path_gps = f2c::Transform::transformToPrevCRS(path, field);
   // f2c::Transform::transformToPrevCRS(field);
   //
-  // f2c::Visualizer::figure();
-  // f2c::Visualizer::plot(field.getCellsAbsPosition());
+  f2c::Visualizer::figure();
+  f2c::Visualizer::plot(field.getCellsAbsPosition());
   // f2c::Visualizer::plot(path_gps);
   // f2c::Visualizer::save("Tutorial_8_1_GPS.png");
 

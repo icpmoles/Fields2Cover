@@ -22,10 +22,14 @@ F2CRoute RoutePlannerBase::genRoute(
     const F2CCells& cells, const F2CSwathsByCells& swaths,
     bool show_log, double d_tol, bool redirect_swaths,
     long int time_limit_seconds, bool search_for_optimum) {
+
+  std::cout << "creating shortest graph" << std::endl;
   F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol);
+  std::cout << "creating coverage graph" << std::endl;
 
   F2CGraph2D cov_graph = createCoverageGraph(
       cells, swaths, shortest_graph, d_tol, redirect_swaths);
+  std::cout << "creating optimal route" << std::endl;
 
   std::vector<long long int> v_route = computeBestRoute(
       cov_graph, show_log, time_limit_seconds, search_for_optimum);
@@ -137,6 +141,8 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(
       if (this->r_start_end) {
         g.addEdge(s.startPoint(), deposit, shortest_graph);
         g.addEdge(s.endPoint(), deposit, shortest_graph);
+        // g.addEdge(s.startPoint(), deposit, 0);
+        // g.addEdge(s.endPoint(), deposit, 0);
       } else {
         g.addEdge(s.startPoint(), deposit, 0);
         g.addEdge(s.endPoint(), deposit, 0);
@@ -154,11 +160,22 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(
   ortools::RoutingIndexManager manager(cov_graph.numNodes(), 1, depot);
   ortools::RoutingModel routing(manager);
 
+  int64_t counter_non_inf = 0;
+  int64_t counter_inf = 0;
   const int transit_callback_index = routing.RegisterTransitCallback(
-      [&cov_graph, &manager] (long long int from, long long int to) -> long long int {
+      [&cov_graph, &manager, &counter_inf, &counter_non_inf] (long long int from, long long int to) -> long long int {
         auto from_node = manager.IndexToNode(from).value();
         auto to_node = manager.IndexToNode(to).value();
-        return cov_graph.getCostFromEdge(from_node, to_node);
+        int64_t cost_arc  = cov_graph.getCostFromEdge(from_node, to_node);
+        if (cost_arc < 1<<29 )
+        {
+          counter_non_inf++;
+          // std::cout << from_node << " to " << to_node  << " = " << cost_arc << std::endl;
+        } else
+        {
+          counter_inf++;
+        }
+        return cost_arc;
       });
   routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index);
   ortools::RoutingSearchParameters searchParameters =
@@ -175,6 +192,57 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(
   }
   searchParameters.mutable_time_limit()->set_seconds(time_limit_seconds);
   searchParameters.set_log_search(show_log);
+  // ortools::RoutingSearchParameters_LocalSearchNeighborhoodOperators local_op; // = ortools::RoutingSearchParameters_LocalSearchNeighborhoodOperators::default_instance();
+  //
+  //
+  // // reset
+  // local_op.set_use_cross(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_cross_exchange(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_exchange(ortools::OptionalBoolean::BOOL_FALSE);
+  // // local_op.set_use_exchange_and_make_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_exchange_pair(ortools::OptionalBoolean::BOOL_FALSE);
+  // // local_op.set_use_exchange_path_start_ends_and_make_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_exchange_subtrip(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_extended_swap_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_full_path_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_global_cheapest_insertion_close_nodes_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_global_cheapest_insertion_expensive_chain_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_global_cheapest_insertion_path_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // // local_op.set_use_global_cheapest_insertion_visit_types_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_inactive_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_light_relocate_pair(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_lin_kernighan(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_local_cheapest_insertion_close_nodes_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_local_cheapest_insertion_expensive_chain_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_local_cheapest_insertion_path_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // // local_op.set_use_local_cheapest_insertion_visit_types_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_make_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_make_chain_inactive(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_make_inactive(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_node_pair_swap_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_or_opt(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_path_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate_and_make_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate_expensive_chain(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate_neighbors(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate_pair(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate_path_global_cheapest_insertion_insert_unperformed(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_relocate_subtrip(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_shortest_path_swap_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // // local_op.set_use_shortest_path_two_opt(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_swap_active(ortools::OptionalBoolean::BOOL_FALSE);
+  // // local_op.set_use_swap_active_chain(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_tsp_lns(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_tsp_opt(ortools::OptionalBoolean::BOOL_FALSE);
+  // local_op.set_use_two_opt(ortools::OptionalBoolean::BOOL_FALSE);
+  //
+  // // set
+  // local_op.set_use_two_opt(ortools::OptionalBoolean::BOOL_TRUE);
+  // local_op.set_use_relocate(ortools::OptionalBoolean::BOOL_TRUE);
+  //
+  //
+  // searchParameters.set_allocated_local_search_operators(&local_op);
   const ortools::Assignment* solution =
     routing.SolveWithParameters(searchParameters);
 
@@ -187,6 +255,8 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(
     v_id.emplace_back(manager.IndexToNode(index).value());
     index = solution->Value(routing.NextVar(index));
   }
+
+  std::cout  << "Non inf :" << counter_non_inf << "out of " << counter_non_inf+counter_inf << " = " << counter_non_inf/(counter_non_inf+counter_inf)*100 << std::endl;
   return v_id;
 }
 

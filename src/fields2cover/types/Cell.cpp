@@ -166,8 +166,6 @@ LineString Cell::createSemiLongLine(const Point& point, double angle) const {
     point.getPointFromAngle(angle, this->getMinSafeLength())});
 }
 
-
-// Creates a Line that goes through a cell/polygon with start/end outside it
 LineString Cell::createStraightLongLine(
     const Point& point, double angle) const {
   return LineString({
@@ -219,22 +217,6 @@ Point Cell::closestPointOnBorderTo(const Point& p) const {
   return ps[std::min_element(dist.begin(), dist.end()) - dist.begin()];
 }
 
-Point Cell::GeometricCentre() const
-{
-  double avg_x= 0.0;
-  double avg_y= 0.0;
-  const LinearRing externalBorder = this->getExteriorRing();
-  const int n = static_cast<int> (externalBorder.size()) - 1 ; // n of points
-  for (int i = 0; i < n ; i++ )
-  {
-    avg_x += externalBorder.getX(i);
-    avg_y += externalBorder.getY(i);
-  }
-  avg_x = avg_x/n;
-  avg_y = avg_y/n;
 
-  return {avg_x, avg_y};
-
-}
 }  // namespace f2c::types
 

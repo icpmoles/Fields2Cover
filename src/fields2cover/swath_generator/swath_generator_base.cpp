@@ -6,8 +6,6 @@
 
 #include "fields2cover/swath_generator/swath_generator_base.h"
 
-#include "fields2cover/utils/visualizer.h"
-
 namespace f2c::sg {
 
 bool SwathGeneratorBase::getAllowOverlap() const {
@@ -20,9 +18,7 @@ void SwathGeneratorBase::setAllowOverlap(bool value) {
 
 F2CSwaths SwathGeneratorBase::generateBestSwaths(
     f2c::obj::SGObjective& obj, double op_width, const F2CCell& poly) {
-  double best_angle = computeBestAngle(obj, op_width, poly);
-  std::cout << "best_angle: " << best_angle*180.0/3.14 << std::endl;
-  return generateSwaths(best_angle, op_width, poly);
+  return generateSwaths(computeBestAngle(obj, op_width, poly), op_width, poly);
 }
 
 F2CSwathsByCells SwathGeneratorBase::generateBestSwaths(
@@ -43,31 +39,21 @@ F2CSwathsByCells SwathGeneratorBase::generateSwaths(double angle,
   return swaths;
 }
 
-F2CSwaths SwathGeneratorBase::generateSwaths(double angle,
-    double op_width, const F2CCell& poly) {
-  return generateSwaths(angle,0.0, op_width, poly);
-}
 
-F2CSwaths SwathGeneratorBase::generateSwaths(double angle, double offset,
+F2CSwaths SwathGeneratorBase::generateSwaths(double angle,
     double op_width, const F2CCell& poly) {
   auto rot_poly {F2CPoint(0.0, 0.0).rotateFromPoint(-angle, poly)};
 
-  // double field_height {rot_poly.getHeight()};
+  double field_height {rot_poly.getHeight()};
   F2CPoint min_point(rot_poly.getDimMinX(), rot_poly.getDimMinY());
-  F2CPoint centroid = rot_poly.GeometricCentre();
-  double y_up = rot_poly.getDimMaxY() - centroid.getY();
-  double y_down = centroid.getY() - rot_poly.getDimMinY();
+  auto seed_curve = rot_poly.createStraightLongLine(min_point, 0.0);
 
-  const F2CLineString seed_curve = rot_poly.createStraightLongLine(F2CPoint(0.0,0.0)+centroid, 0.0);
-  double curve_y {offset - 0.5 * op_width};
+  double curve_y {-0.5 * op_width};
   F2CMultiLineString paths;
-  while (std::max(y_up,y_down) > curve_y + (allow_overlap ? 0.0 : 0.5 * op_width)) {
+  while (field_height > curve_y + (allow_overlap ? 0.0 : 0.5 * op_width)) {
     curve_y += op_width;
-    auto g_up = seed_curve + F2CPoint(0.0, curve_y);
-    auto g_down = seed_curve + F2CPoint(0.0, -curve_y);
-    paths.addGeometry(F2CPoint(0.0, 0.0).rotateFromPoint(angle,g_up));
-    paths.addGeometry(F2CPoint(0.0, 0.0).rotateFromPoint(angle,g_down));
-
+    paths.addGeometry(F2CPoint(0.0, 0.0).rotateFromPoint(angle,
+        seed_curve + F2CPoint(0.0, curve_y)));
   }
 
   F2CSwaths swaths;

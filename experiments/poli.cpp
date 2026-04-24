@@ -5,10 +5,19 @@
 #include "fields2cover.h"
 #include <iostream>
 
+
+struct sol_val
+{
+  float width;
+  float cov_width;
+  float multiplier;
+} ;
+
 int main() {
   // Import field
   F2CFields fields;
-  f2c::Parser::importJson(std::string(DATA_PATH) + "giurati_poles.geojson", fields);
+   f2c::Parser::importJson(std::string(DATA_PATH) + "campo_full.geojson", fields);
+  // f2c::Parser::importJson(std::string(DATA_PATH) + "giurati_poles.geojson", fields);
   F2CField field = fields[0];
   // Transform into UTM to work in meters
   // f2c::Transform::transformToUTM(field);
@@ -17,27 +26,60 @@ int main() {
 
   std::cout << "EPSG: " << field.getEPSGCoordSystem() << std::endl;
 
+  sol_val success {.width = 0.2, .cov_width = 2.0, .multiplier=  3.0};
+  sol_val wrong {.width = 1.2, .cov_width = 1.20, .multiplier=  1.1};
 
-  F2CRobot robot (0.20, 1.5);
+  sol_val selected=wrong;
+
+
+  F2CRobot robot (selected.width, selected.cov_width);
   f2c::hg::ConstHL const_hl;
-  F2CCells no_hl = const_hl.generateHeadlands(field.getField(), 3.0 * robot.getWidth());
+  F2CCells no_hl = const_hl.generateHeadlands(field.getField(), selected.multiplier * robot.getWidth());
   f2c::sg::BruteForce bf;
   F2CSwaths swaths = bf.generateSwaths(M_PI, robot.getCovWidth(), no_hl.getGeometry(0));
+  F2CSwathsByCells swathsbc = bf.generateSwaths(M_PI, robot.getCovWidth(), no_hl);
+
   f2c::rp::BoustrophedonOrder sorter;
-  swaths = sorter.genSortedSwaths(swaths);
+
+  std::cout << "Generated " << swathsbc[0].size() << " swaths" << std::endl;
+
+  // f2c::Visualizer::figure();
+  // f2c::Visualizer::plot(no_hl);
+  // f2c::Visualizer::plot(swathsbc);
+  //
+  // f2c::Visualizer::show();
+
+  F2CSwaths boustrophedon_swaths = swaths; //sorter.genSortedSwaths(swaths);
   f2c::pp::PathPlanning path_planner;
-  robot.setMinTurningRadius(0.1);  // m
+  robot.setMinTurningRadius(0.02);  // m
   f2c::pp::DubinsCurves dubins;
-  F2CPath path = path_planner.planPath(robot, swaths, dubins);
+
+  f2c::rp::RoutePlannerBase route_planner;
+  F2CRoute route = route_planner.genRoute(no_hl, swathsbc, true, 0.001,
+    true, 100, true);
+  F2CPath path = path_planner.planPath(robot, route, dubins);
+
+  std::cout << "completed " << std::endl;
 
   f2c::Visualizer::figure();
   f2c::Visualizer::figure_size(1500, 1500);
   f2c::Visualizer::plot(field);
 
-  f2c::Visualizer::plot(swaths);
+  // f2c::Visualizer::plot(swathsbc);
   f2c::Visualizer::plot(no_hl);
-  f2c::Visualizer::plot(path);
+  f2c::Visualizer::plot(route);
   f2c::Visualizer::save("campo_elaborato.png");
+
+  f2c::Visualizer::figure();
+  f2c::Visualizer::figure_size(1500, 1500);
+  f2c::Visualizer::plot(field);
+
+  // f2c::Visualizer::plot(swathsbc);
+  f2c::Visualizer::plot(no_hl);
+  f2c::Visualizer::plot(route);
+
+  f2c::Visualizer::plot(path);
+  f2c::Visualizer::save("campo_elaborato_path.png");
 
   // f2c::Transform::transformToUTM(field);
   f2c::Visualizer::figure();
@@ -52,6 +94,9 @@ int main() {
   f2c::Visualizer::plot(field);
   f2c::Visualizer::save("campo_source_utm.png");
 
+  F2CPath path_gps = f2c::Transform::transformToPrevCRS(path, field);
+  path_gps.saveToFile("path.csv",10);
+  // std::string ss =route.exportToJson();
 
 
   // // Transform the generated path back to the previousa CRS.

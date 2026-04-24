@@ -23,14 +23,6 @@ void BruteForce::setStepAngle(double d) {
   this->step_angle = d;
 }
 
-int BruteForce::getOffsetDivisions() const {
-return this->offset_divisions;
-}
-
-void BruteForce::setOffsetDivisions(int div) {
-this->offset_divisions = div;
-}
-
 double BruteForce::computeBestAngle(f2c::obj::SGObjective& obj,
     double op_width, const F2CCell& poly) {
   int n = static_cast<int>(
@@ -49,10 +41,9 @@ double BruteForce::computeBestAngle(f2c::obj::SGObjective& obj,
   #else
     std::transform(ids.begin(), ids.end(), costs.begin(), getCostSwaths);
   #endif
-  auto min_el = std::min_element(
-      costs.begin(), costs.end());
-  auto idx = min_el - costs.begin();
-  return ids[idx] * step_angle;
+
+  return ids[std::min_element(
+      costs.begin(), costs.end()) - costs.begin()] * step_angle;
 }
 
 }  // namespace f2c::sg

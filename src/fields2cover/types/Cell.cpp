@@ -217,6 +217,10 @@ Point Cell::closestPointOnBorderTo(const Point& p) const {
   return ps[std::min_element(dist.begin(), dist.end()) - dist.begin()];
 }
 
+int64_t Cell::countIntersections(const Point &p1, const Point &p2) const {
+
+  return 0;
+}
 
 }  // namespace f2c::types
 

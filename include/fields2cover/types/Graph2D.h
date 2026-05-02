@@ -25,8 +25,10 @@ class Graph2D : public Graph {
   using Graph::shortestPath;
   using Graph::shortestPathCost;
 
-  Graph2D& addDirectedEdge(const Point& from, const Point& to, int64_t cost);
-  Graph2D& addEdge(const Point& i, const Point& j, int64_t cost);
+  Graph2D& addDirectedEdge(const Point &from, const Point &to, int64_t cost,
+                           bool is_swath = false);
+  Graph2D& addEdge(const Point &i, const Point &j, int64_t cost,
+                   bool is_swath = false);
   Graph2D& addDirectedEdge(const Point& from, const Point& to);
   Graph2D& addEdge(const Point& i, const Point& j);
   Graph2D& addDirectedEdge(
@@ -52,6 +54,9 @@ class Graph2D : public Graph {
   int64_t shortestPathCost(const Point& from, const Point& to,
         int64_t INF = 1<<30);
 
+  double getScale() const{
+    return scale_;
+  }
  protected:
   std::unordered_map<Point, size_t> nodes_to_index_;
   std::unordered_map<size_t, Point> index_to_nodes_;

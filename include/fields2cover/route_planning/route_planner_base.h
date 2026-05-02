@@ -50,9 +50,10 @@ class RoutePlannerBase {
   /// @param cells Headland swath rings used to travel through the headlands
   /// @param swaths_by_cells Swaths to be covered.
   /// @param d_tol Tolerance distance to consider if two points are the same.
-  virtual F2CGraph2D createShortestGraph(
-      const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
-      double d_tol) const;
+  /// @param new_gen
+  virtual F2CGraph2D createShortestGraph(const F2CCells &cells,
+                      const F2CSwathsByCells &swaths_by_cells, double d_tol,
+                      bool new_gen = false) const;
 
   /// Create graph to compute the cost of covering the swaths in a given order.
   ///
@@ -61,10 +62,11 @@ class RoutePlannerBase {
   /// @param shortest_graph Graph to compute the shortest path
   ///          between two nodes.
   /// @param d_tol Tolerance distance to consider if two points are the same.
-  virtual F2CGraph2D createCoverageGraph(
-      const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
-      F2CGraph2D& shortest_graph,
-      double d_tol, bool redirect_swaths = true) const;
+  /// @param new_gen
+  virtual F2CGraph2D createCoverageGraph(const F2CCells &cells,
+                      const F2CSwathsByCells &swaths_by_cells,
+                      F2CGraph2D &shortest_graph, double d_tol,
+                      bool redirect_swaths = true, bool new_gen = false) const;
 
 
   virtual ~RoutePlannerBase() = default;
@@ -77,9 +79,10 @@ class RoutePlannerBase {
   /// @param use_guided_local_search If true, uses guided local search which may take longer
   ///        but can find more optimal solutions. If false, uses automatic search which is faster
   ///        but may find less optimal solutions.
+  /// @param new_gen enable new algorithm
   virtual std::vector<long long int> computeBestRoute(
-      const F2CGraph2D& cov_graph, bool show_log, long int time_limit_seconds,
-      bool use_guided_local_search = true) const;
+      const F2CGraph2D &cov_graph, bool show_log, long int time_limit_seconds,
+      bool use_guided_local_search = true, bool new_gen = false) const;
 
   /// Tranform index of points to an actual Route.
   virtual F2CRoute transformSolutionToRoute(

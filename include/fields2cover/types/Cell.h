@@ -99,6 +99,9 @@ struct Cell : public Geometries<Cell, OGRPolygon, wkbPolygon, LinearRing> {
 
   /// Find the closest point from a point to the border of the field
   Point closestPointOnBorderTo(const Point& p) const;
+
+  // countes the number of intersection between two points inside a cell
+  int64_t countIntersections(const Point& p1, const Point& p2) const;
 };
 
 template <class T, OGRwkbGeometryType R>

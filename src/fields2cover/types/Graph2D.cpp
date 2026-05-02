@@ -9,20 +9,26 @@
 
 namespace f2c::types {
 
-Graph2D& Graph2D::addDirectedEdge(
-    const Point& from, const Point& to, int64_t cost) {
+Graph2D& Graph2D::addDirectedEdge(const Point &from, const Point &to,
+                                  int64_t cost, bool is_swath) {
   size_t p_from = this->nodes_to_index_.insert(
       std::make_pair(from, nodes_to_index_.size())).first->second;
   size_t p_to   = this->nodes_to_index_.insert(
       std::make_pair(to,   nodes_to_index_.size())).first->second;
+
+  if (is_swath) {
+    swath_extremities_nodes_.insert(p_from);
+    swath_extremities_nodes_.insert(p_to);
+  }
   this->index_to_nodes_.insert({{p_from, from}, {p_to, to}});
   this->addDirectedEdge(p_from, p_to, cost);
   return *this;
 }
 
-Graph2D& Graph2D::addEdge(const Point& i, const Point& j, int64_t cost) {
-  this->addDirectedEdge(i, j, cost);
-  return this->addDirectedEdge(j, i, cost);
+Graph2D& Graph2D::addEdge(const Point &i, const Point &j, int64_t cost,
+                          bool is_swath) {
+  this->addDirectedEdge(i, j, cost, is_swath);
+  return this->addDirectedEdge(j, i, cost, is_swath);
 }
 
 Graph2D& Graph2D::addDirectedEdge(const Point& from, const Point& to) {
@@ -42,6 +48,10 @@ Graph2D& Graph2D::addEdge(
     const Point& i, const Point& j, Graph2D& short_path_g) {
   addDirectedEdge(i, j, short_path_g.shortestPathCost(i, j));
   return addDirectedEdge(j, i, short_path_g.shortestPathCost(j, i));
+
+  // const int64_t symmetric_cost = short_path_g.shortestPathCost(i, j);
+  // addDirectedEdge(i, j, symmetric_cost);
+  // return addDirectedEdge(j, i, symmetric_cost);
 }
 
 
@@ -74,10 +84,14 @@ Point Graph2D::indexToNode(size_t id) const {
   return this->index_to_nodes_.at(id);
 }
 
+// nb: never used???
 std::vector<std::vector<Point>> Graph2D::allPathsBetween(
     const Point& from, const Point& to) const {
+
+  // routes of node_idx
   auto int_routes = this->allPathsBetween(nodeToIndex(from), nodeToIndex(to));
 
+  // routes of Points
   std::vector<std::vector<Point>> routes;
   for (auto&& i_route : int_routes) {
     routes.emplace_back();

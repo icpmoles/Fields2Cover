@@ -12,6 +12,8 @@
 #include <vector>
 #include "fields2cover/types/Geometries.h"
 #include "fields2cover/types/Point.h"
+#include "fields2cover/types/Path.h"
+#include "fields2cover/types/Robot.h"
 
 namespace f2c::types {
 
@@ -46,6 +48,8 @@ struct MultiPoint :
   double getPointAngle(size_t i) const;
 
   void operator*=(double b);
+
+  Path asPath(Robot& robot);
 };
 
 }  // namespace f2c::types

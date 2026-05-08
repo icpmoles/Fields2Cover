@@ -18,6 +18,7 @@
 #include "fields2cover/types/LineString.h"
 #include "fields2cover/types/MultiPoint.h"
 #include "fields2cover/types/Graph2D.h"
+#include "fields2cover/types/Path.h"
 
 namespace f2c::types {
 
@@ -65,6 +66,8 @@ struct Route {
   void reverse();
 
   Route clone() const;
+
+  Path asPath(Robot& robot);
 
  private:
   std::vector<Swaths> v_swaths_;

@@ -91,13 +91,58 @@ TEST(fields2cover_types_multipoint, getAngles) {
   F2CMultiPoint ps1{F2CPoint(1,1), F2CPoint(2,2), F2CPoint(0, 2), F2CPoint(1, 1)};
   EXPECT_EQ(ps1.size(), 4);
   EXPECT_NEAR(ps1.getOutAngle(0), M_PI / 4.0, 1e-7);
+  EXPECT_NEAR(ps1.getPointAngle(0), M_PI / 4.0, 1e-7);
   EXPECT_NEAR(ps1.getInAngle(1), M_PI / 4.0, 1e-7);
   EXPECT_NEAR(ps1.getOutAngle(1), M_PI, 1e-7);
+  EXPECT_NEAR(ps1.getPointAngle(1), 5.0 * M_PI / 8.0, 1e-7);
   EXPECT_NEAR(ps1.getInAngle(2), M_PI, 1e-7);
   EXPECT_NEAR(ps1.getOutAngle(2), 7.0 * M_PI / 4.0, 1e-7);
+  EXPECT_NEAR(ps1.getPointAngle(2), 11.0 * M_PI / 8.0, 1e-7);
   EXPECT_NEAR(ps1.getInAngle(3), 7.0 * M_PI / 4.0, 1e-7);
+  EXPECT_NEAR(ps1.getPointAngle(3), 7.0 * M_PI / 4.0, 1e-7);
   EXPECT_THROW(ps1.getInAngle(0), std::invalid_argument);
   EXPECT_THROW(ps1.getOutAngle(3), std::invalid_argument);
+
+  F2CMultiPoint ps2{F2CPoint(1,1)};
+  EXPECT_EQ(ps2.size(), 1);
+  EXPECT_THROW(ps2.getPointAngle(0), std::invalid_argument);
 }
 
+TEST(fields2cover_types_multipoint, convert_to_path) {
+  F2CRobot robot(1., 2.);
+  F2CMultiPoint zigzag{F2CPoint(1,1), F2CPoint(2,2),
+    F2CPoint(3,1), F2CPoint(4,2)};
+  F2CPath zz_path = zigzag.asPath(robot);
 
+  EXPECT_EQ(zz_path.size(), 4);
+
+  EXPECT_EQ(zz_path[0].angle, M_PI / 4.0);
+  EXPECT_EQ(zz_path[0].len, sqrt(2));
+
+  EXPECT_EQ(zz_path[1].angle, 2.0 * M_PI);
+  EXPECT_EQ(zz_path[1].len, sqrt(2));
+
+  EXPECT_EQ(zz_path[2].angle, 2.0 * M_PI);
+  EXPECT_EQ(zz_path[2].len, sqrt(2));
+
+  EXPECT_EQ(zz_path[3].angle, M_PI / 4.0);
+  EXPECT_EQ(zz_path[3].len, 0);
+
+  F2CMultiPoint arc{F2CPoint(1,1), F2CPoint(1,2),
+    F2CPoint(2,2), F2CPoint(2,1)};
+  F2CPath arc_path = arc.asPath(robot);
+
+  EXPECT_EQ(arc_path.size(), 4);
+
+  EXPECT_EQ(arc_path[0].angle, M_PI / 2.0);
+  EXPECT_EQ(arc_path[0].len, 1);
+
+  EXPECT_EQ(arc_path[1].angle, M_PI / 4.0);
+  EXPECT_EQ(arc_path[1].len, 1);
+
+  EXPECT_EQ(arc_path[2].angle, 7.0 * M_PI / 4.0 );
+  EXPECT_EQ(arc_path[2].len, 1);
+
+  EXPECT_EQ(arc_path[3].angle, 3.0 * M_PI / 2.0);
+  EXPECT_EQ(arc_path[3].len, 0);
+}

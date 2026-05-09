@@ -15,6 +15,7 @@
 #include "fields2cover/types/Swath.h"
 #include "fields2cover/types/Point.h"
 #include "fields2cover/types/LineString.h"
+#include "fields2cover/types/MultiPoint.h"
 #include "fields2cover/types/MultiLineString.h"
 #include "fields2cover/types/PathState.h"
 
@@ -22,6 +23,9 @@ namespace f2c::types {
 
 struct Path {
  public:
+  Path();
+  explicit Path(const MultiPoint& mp, double vel);
+
   PathState& getState(size_t i);
   const PathState& getState(size_t i) const;
   void setState(size_t i, const PathState& ps);

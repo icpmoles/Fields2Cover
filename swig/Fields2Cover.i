@@ -146,12 +146,12 @@ EXTEND_OPERATOR(Cells)
 
 %include "fields2cover/types/Strip.h"
 %include "fields2cover/types/Field.h"
-%ignore f2c::types::Route::addSwath;
-%include "fields2cover/types/Route.h"
+%include "fields2cover/types/Robot.h"
 %include "fields2cover/types/PathState.h"
 %ignore f2c::types::Path::operator[];
 %include "fields2cover/types/Path.h"
-%include "fields2cover/types/Robot.h"
+/* %ignore f2c::types::Route::addSwath; */
+%include "fields2cover/types/Route.h"
 %include "fields2cover/types.h"
 
 %template(optional_double) std::optional<double>;

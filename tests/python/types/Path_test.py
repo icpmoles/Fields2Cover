@@ -185,6 +185,14 @@ def test_fields2cover_types_path_list_points():
   points = [path[i].point for i in range(n)]
 
   near(n, path.size())
+def test_fields2cover_types_path_from_multipoint():
+  zigzag = f2c.MultiPoint(f2c.VectorPoint(
+    [f2c.Point(1.0, 1.0),
+     f2c.Point(2.0, 2.0),
+     f2c.Point(3.0, 1.0),
+     f2c.Point(4.0, 2.0)]))
+  zz_path = f2c.Path(zigzag, 1.0)
 
-
+  assert (zz_path.size() == 4.0)
+  near (zz_path.length(), 3.0*math.sqrt(2.0))
 

@@ -5,6 +5,7 @@
 //=============================================================================
 
 #include "fields2cover/types/MultiPoint.h"
+#include "fields2cover/types/Robot.h"
 
 namespace f2c::types {
 
@@ -135,21 +136,6 @@ double MultiPoint::getPointAngle(size_t i) const {
     return getInAngle(i);
   }
   return getAngleAvg(getInAngle(i), getOutAngle(i));
-}
-
-Path MultiPoint::asPath(Robot& robot) {
-  Path path;
-  for (int i = 0; i<this->size(); i++) {
-    PathState ps;
-    ps.point = this->getGeometry(i);
-    ps.angle = this->getPointAngle(i);
-    ps.velocity = robot.getTurnVel();
-    ps.len = (i < this->size()-1) ? this->getGeometry(i).distance(this->getGeometry(i+1)) : 0.0;
-    ps.dir = types::PathDirection::FORWARD;
-    ps.type = types::PathSectionType::TURN;
-    path.addState(ps);
-  }
-  return path;
 }
 
 }  // namespace f2c::types

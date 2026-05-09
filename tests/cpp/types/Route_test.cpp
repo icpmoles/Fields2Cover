@@ -151,26 +151,30 @@ TEST(fields2cover_types_route, convert_to_path) {
   EXPECT_EQ(path[n-1].point.getY(), conn4end.getGeometry(1).getY());
   EXPECT_EQ(path[n-1].angle,0);
   EXPECT_EQ(path[n-1].type, f2c::types::PathSectionType::TURN);
+
+
+  F2CRoute route_with_deposit;
+
+  F2CMultiPoint conndep1({F2CPoint(0.0, 0.0), F2CPoint(1.0, 1.0)});
+  F2CLineString wd_line1({F2CPoint(1.0, 1.0), F2CPoint(1.0, 2.0), F2CPoint(1.0, 4.0)});
+  F2CSwath wd_swath1(wd_line1);
+  F2CMultiPoint wd_conn12({F2CPoint(1.1, 4.0), F2CPoint(1.5, 4.0), F2CPoint(2.0, 4.0)});
+
+  F2CLineString wd_line2({F2CPoint(2.0, 4.0), F2CPoint(2.0, 2.0), F2CPoint(2.0, 1.0)});
+  F2CSwath wd_swath2(wd_line2);
+  F2CMultiPoint wd_conn2dep({F2CPoint(2.0, 1.0), F2CPoint(2.0, 0.0),
+      F2CPoint(1.0, 0.0), F2CPoint(0.0, 0.0)});
+
+  route_with_deposit.addConnection(conndep1);
+  route_with_deposit.addSwath(wd_swath1);
+  route_with_deposit.addConnection(wd_conn12);
+  route_with_deposit.addSwath(wd_swath2);
+  route_with_deposit.addConnection(wd_conn2dep);
+
+  F2CPath path_wd = route_with_deposit.asPath(robot);
+  size_t wd_n =path_wd.size();
+  EXPECT_EQ(wd_n,2+2+3+2+4);
+  EXPECT_EQ(path_wd[0].point.getX(), path_wd[wd_n-1].point.getX());
+  EXPECT_EQ(path_wd[0].point.getY(), path_wd[wd_n-1].point.getY());
+
 }
-
-
-// TEST(fields2cover_types_route, convert_to_path_with_deposit) {
-//   F2CRoute route;
-//   F2CRobot robot;
-//   F2CLineString line1({F2CPoint(1.0, 1.0), F2CPoint(1.0, 2.0), F2CPoint(1.0, 4.0)});
-//   F2CSwath swath1(line1);
-//   F2CMultiPoint conn12({F2CPoint(1.0, 4.0), F2CPoint(1.5, 4.0), F2CPoint(2.0, 4.0)});
-//
-//   F2CLineString line2({F2CPoint(2.0, 4.0), F2CPoint(2.0, 2.0), F2CPoint(2.0, 1.0)});
-//   F2CSwath swath2(line2);
-//   F2CMultiPoint conn23({F2CPoint(2.0, 1.0), F2CPoint(2.25, 0.75),
-//       F2CPoint(2.75, 0.75), F2CPoint(3.0, 1.0)});
-//
-//   F2CLineString line3({F2CPoint(3.0, 1.0), F2CPoint(3.0, 2.0)});
-//   F2CSwath swath3(line3);
-//   F2CLineString line4({F2CPoint(4.0, 2.0), F2CPoint(4.0, 1.0)});
-//   F2CSwath swath4(line4);
-//
-//   route.addSwath(swath1);
-//
-// }

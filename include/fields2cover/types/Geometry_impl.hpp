@@ -54,7 +54,7 @@ template <class T, OGRwkbGeometryType R>
 Geometry<T, R>::Geometry(Geometry&& g) = default;
 
 template <class T, OGRwkbGeometryType R>
-#if defined(__clang__) // workaround for LLVM/SWIG errors
+#if defined(__clang__) // workaround for LLVM errors
 Geometry<T, R>& Geometry<T, R>::operator=(
     Geometry&& g) = default;
 #else

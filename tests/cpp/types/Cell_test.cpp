@@ -219,5 +219,43 @@ TEST(fields2cover_types_sstr, NumberStringConcat) {
   EXPECT_EQ(result, "aa1010");
 }
 
+TEST(fields2cover_types_sstr, countIntersections) {
+  F2CCell cell1;
+  F2CLinearRing outer{
+    F2CPoint(1,2), F2CPoint(4,2),F2CPoint(4,4),F2CPoint(1,4), F2CPoint(1,2)};
+  cell1.addRing(outer);
+  F2CLinearRing inner1{
+    F2CPoint(2,2.5), F2CPoint(3,2.5),F2CPoint(3,3.5),F2CPoint(2,3.5), F2CPoint(2,2.5)};
+  cell1.addRing(inner1);
 
+  F2CPoint left(1.25,3), right(3.75, 3.0), middle(2.5, 3.0);
+  F2CPoint outside_right(4.5,3);
+
+  EXPECT_EQ(cell1.countCollisions(left, right), 2);
+  EXPECT_EQ(cell1.countCollisions(left, middle), 1);
+  EXPECT_EQ(cell1.countCollisions(right, middle), 1);
+  EXPECT_EQ(cell1.countCollisions(outside_right, middle), 1);
+  EXPECT_EQ(cell1.countCollisions(outside_right, right), 0);
+
+  F2CCell cell2;
+  cell2.addRing(outer);
+  F2CLinearRing inner_left{
+    F2CPoint(1.5,2.5), F2CPoint(2,2.5),F2CPoint(2,3.5),F2CPoint(1.5,3.5), F2CPoint(1.5,2.5)};
+  F2CLinearRing inner_right{
+    F2CPoint(3,2.5), F2CPoint(3.5,2.5),F2CPoint(3.5,3.5),F2CPoint(3,3.5), F2CPoint(3,2.5)};
+  F2CPoint inside_left_inner(1.75,3);
+
+  cell2.addRing(inner_left);
+  cell2.addRing(inner_right);
+
+
+  EXPECT_EQ(cell2.countCollisions(left, right), 4);
+  EXPECT_EQ(cell2.countCollisions(left, middle), 2);
+  EXPECT_EQ(cell2.countCollisions(right, middle), 2);
+  EXPECT_EQ(cell2.countCollisions(outside_right, middle), 2);
+  EXPECT_EQ(cell2.countCollisions(outside_right, right), 0);
+  EXPECT_EQ(cell2.countCollisions(inside_left_inner, right), 3);
+  EXPECT_EQ(cell2.countCollisions(inside_left_inner, left), 1);
+
+}
 

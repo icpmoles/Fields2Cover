@@ -115,10 +115,18 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(
           auto s2_s = s2.startPoint();
           auto s2_e = s2.endPoint();
           if (redirect_swaths) {
-            g.addEdge(s1_s, s2_s, shortest_graph);
-            g.addEdge(s1_e, s2_e, shortest_graph);
-            g.addEdge(s1_s, s2_e, shortest_graph);
-            g.addEdge(s1_e, s2_s, shortest_graph);
+            for (auto a: {s1_s, s1_e}) {
+              for (auto b: {s2_s, s2_e}) {
+                int64_t cost_function = shortest_graph.shortestPathCost(a,b);
+                if (cost_function > 29<<1) {
+                  // std::cout << "found unconnected case"<< std::endl ;
+                  const int64_t l2_d = a.distance(b)*shortest_graph.getScalingFactor();
+                  const int collisions = cells.countCollisions(a,b);
+                  cost_function += pow(l2_d, 2) +collisions;
+                }
+                g.addEdge(a, b, cost_function);
+              }
+            }
           } else {
             g.addDirectedEdge(s1_e, s2_s, shortest_graph);
           }

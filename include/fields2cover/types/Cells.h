@@ -91,6 +91,8 @@ struct Cells : public Geometries<Cells, OGRMultiPolygon, wkbMultiPolygon,
   Cells buffer(double width) const;
 
   Point closestPointOnBorderTo(const Point& p) const;
+
+  int64_t countCollisions(const Point& a, const Point& b) const;
 };
 
 

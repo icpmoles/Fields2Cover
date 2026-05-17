@@ -88,6 +88,9 @@ struct Cell : public Geometries<Cell, OGRPolygon, wkbPolygon, LinearRing> {
   /// Compute the sections of a MultiLineString that is inside this cell
   MultiLineString getLinesInside(const MultiLineString& lines) const;
 
+  /// Counts the number of intersections when going from a to b
+  int64_t countCollisions(const Point& a, const Point& b) const;
+
   /// Check if a point is in the border of this cell
   bool isPointInBorder(const Point& p) const;
 

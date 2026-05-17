@@ -103,6 +103,9 @@ int64_t Graph2D::shortestPathCost(
   return this->shortestPathCost(nodeToIndex(from), nodeToIndex(to), INF);
 }
 
+double Graph2D::getScalingFactor() const {
+  return this->scale_;
+}
 
 }  // namespace f2c::types
 

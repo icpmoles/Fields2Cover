@@ -52,6 +52,8 @@ class Graph2D : public Graph {
   int64_t shortestPathCost(const Point& from, const Point& to,
         int64_t INF = 1<<30);
 
+  double getScalingFactor() const;
+
  protected:
   std::unordered_map<Point, size_t> nodes_to_index_;
   std::unordered_map<size_t, Point> index_to_nodes_;

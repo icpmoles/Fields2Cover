@@ -257,5 +257,14 @@ TEST(fields2cover_types_sstr, countIntersections) {
   EXPECT_EQ(cell2.countCollisions(inside_left_inner, right), 3);
   EXPECT_EQ(cell2.countCollisions(inside_left_inner, left), 1);
 
+  F2CCell cell_nonconvex;
+  F2CLinearRing nc{
+    F2CPoint(1,1), F2CPoint(2,2),F2CPoint(3,1),F2CPoint(2,4), F2CPoint(1,1)};
+  cell_nonconvex.addRing(nc);
+  F2CPoint a(1.5,1.75), b(2.5, 1.75), c(2, 3);
+  EXPECT_EQ(cell_nonconvex.countCollisions(a, b), 2);
+  EXPECT_EQ(cell_nonconvex.countCollisions(a, c), 0);
+
+
 }
 

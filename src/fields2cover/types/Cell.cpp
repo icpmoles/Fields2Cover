@@ -182,17 +182,24 @@ MultiLineString Cell::getLinesInside(const LineString& line) const {
 MultiLineString Cell::getLinesInside(const MultiLineString& lines) const {
   return lines.intersection(*this);
 }
-int64_t Cell::countCollisions(const Point& a, const Point& b) const {
-  const int points_belonging =  this->isPointIn(a) + this->isPointIn(b);
 
+int64_t Cell::countCollisions(const Point& a, const Point& b, bool use_crossing) const {
+  // bool use_crossing = false;
   const LineString segment({a,b});
-  const MultiLineString lines = this->getLinesInside(segment);
-  F2CCell ext_cell(this->getExteriorRing());
-  int points_not_inside = 2 - (ext_cell.isPointIn(a) + ext_cell.isPointIn(b));
 
-  return std::max({
-    (int64_t)(lines.size()*2 - points_belonging - points_not_inside),
-    (int64_t)0});
+  if (use_crossing) {
+    return segment.crosses(*this);
+  } else {
+    const int points_belonging =  this->isPointIn(a) + this->isPointIn(b);
+
+    const MultiLineString lines = this->getLinesInside(segment);
+    F2CCell ext_cell(this->getExteriorRing());
+    int points_not_inside = 2 - (ext_cell.isPointIn(a) + ext_cell.isPointIn(b));
+
+    return std::max({
+      (int64_t)(lines.size()*2 - points_belonging - points_not_inside),
+      (int64_t)0});
+  }
 }
 
 bool Cell::isPointInBorder(const Point& p) const {

@@ -13,19 +13,29 @@
 #include <vector>
 #include <limits>
 #include "fields2cover/route_planning/route_planner_base.h"
+#include <ctime>
+
 
 namespace f2c::rp {
 
 namespace ortools = operations_research;
 
-F2CRoute RoutePlannerBase::genRoute(
-    const F2CCells& cells, const F2CSwathsByCells& swaths,
-    bool show_log, double d_tol, bool redirect_swaths,
-    long int time_limit_seconds, bool search_for_optimum) {
+F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
+    const F2CSwathsByCells& swaths,
+    bool show_log,
+    double d_tol,
+    bool redirect_swaths,
+    long int time_limit_seconds,
+    bool search_for_optimum,
+    float dist_exponent,
+    bool use_visibility,
+    float visibility_factor,
+    bool use_crossing) {
   F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol);
 
   F2CGraph2D cov_graph = createCoverageGraph(
-      cells, swaths, shortest_graph, d_tol, redirect_swaths);
+      cells, swaths, shortest_graph, d_tol, redirect_swaths, dist_exponent, use_visibility,
+      visibility_factor, use_crossing);
 
   std::vector<long long int> v_route = computeBestRoute(
       cov_graph, show_log, time_limit_seconds, search_for_optimum);
@@ -46,6 +56,8 @@ F2CGraph2D RoutePlannerBase::createShortestGraph(
     for (auto&& s : swaths) {
       g.addEdge(s.startPoint(), cells.closestPointOnBorderTo(s.startPoint()));
       g.addEdge(s.endPoint(),   cells.closestPointOnBorderTo(s.endPoint()));
+      // const int64_t swath_cost = 1e7 + g.getScalingFactor()*pow((s.length()*20.0),1.5);
+      // g.addEdge(s.startPoint(), s.endPoint(),swath_cost);
     }
   }
 
@@ -88,11 +100,17 @@ F2CGraph2D RoutePlannerBase::createShortestGraph(
 }
 
 
-F2CGraph2D RoutePlannerBase::createCoverageGraph(
-    const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
+F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
+    const F2CSwathsByCells& swaths_by_cells,
     F2CGraph2D& shortest_graph,
-    double d_tol, bool redirect_swaths) const {
+    double d_tol,
+    bool redirect_swaths,
+    float dist_exponent,
+    bool use_visibility,
+    float visibility_factor,
+    bool use_crossing) const {
   F2CGraph2D g;
+  int64_t INF = 1<<29;
   for (auto&& swaths : swaths_by_cells) {
     for (auto&& s : swaths) {
       F2CPoint mid_p {(s.startPoint() + s.endPoint()) * 0.5};
@@ -105,24 +123,35 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(
       }
     }
   }
-
+  std::clock_t start_clock = 0;
+  int64_t counter = 0;
+  int64_t total_nodes = swaths_by_cells.sizeTotal()*swaths_by_cells.sizeTotal();
   for (const auto& swaths1 : swaths_by_cells) {
     for (const auto& s1 : swaths1) {
       auto s1_s = s1.startPoint();
       auto s1_e = s1.endPoint();
       for (const auto& swaths2 : swaths_by_cells) {
         for (const auto& s2 : swaths2) {
+          if (counter%100==0) {
+            std::cout << counter << "/" << total_nodes << " = " << (counter*1.0/total_nodes)*100.0 << "%"  << std::endl;
+          }
+          counter++;
+          if (counter==2) {
+            start_clock = std::clock();
+          }
           auto s2_s = s2.startPoint();
           auto s2_e = s2.endPoint();
           if (redirect_swaths) {
             for (auto a: {s1_s, s1_e}) {
               for (auto b: {s2_s, s2_e}) {
                 int64_t cost_function = shortest_graph.shortestPathCost(a,b);
-                if (cost_function > 29<<1) {
-                  // std::cout << "found unconnected case"<< std::endl ;
+                // if (cost_function > INF) {
+                if ( cost_function > INF || use_visibility ) {
+                   // std::cout << "found unconnected case " <<a << " & " << b<< std::endl ;
                   const int64_t l2_d = a.distance(b)*shortest_graph.getScalingFactor();
-                  const int collisions = cells.countCollisions(a,b);
-                  cost_function += pow(l2_d, 2) +collisions;
+                  const int64_t collisions = (use_visibility) ? cells.countCollisions(a, b, use_crossing) : 0;
+                  cost_function +=  INF * ( collisions * visibility_factor);
+                  cost_function += pow(l2_d, dist_exponent);
                 }
                 g.addEdge(a, b, cost_function);
               }
@@ -134,6 +163,9 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(
       }
     }
   }
+
+  const auto end_time = std::clock();
+  std::cout << "TIME" << float( end_time - start_clock ) /  CLOCKS_PER_SEC;
 
   F2CPoint deposit(-1e8, -1e8);  // Arbitrary point
   if (this->r_start_end) {

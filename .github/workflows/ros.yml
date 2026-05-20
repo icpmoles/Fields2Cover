@@ -13,11 +13,11 @@ jobs:
     env:
       ROS_DISTRO: ${{ matrix.ros_distro }}
     container:
-      image: rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-desktop-latest
+      image: rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-ros-base-latest
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [rolling, jazzy, kilted]
+        ros_distro: [rolling]
     steps:
       - name: checkout source
         uses: actions/checkout@v4

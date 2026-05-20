@@ -17,7 +17,7 @@ option(BUILD_DOC "Build Documentation" OFF)
 option(BUILD_SHARED_LIBS "Build shared library(.so)" ON)
 option(USE_ORTOOLS_RELEASE "Get or-tools from release tarball" OFF)
 option(USE_ORTOOLS_FETCH_SRC "Get or-tools from source" OFF)
-option(USE_ORTOOLS_VENDOR "Get or-tools from ortools_vendor" OFF)
+option(USE_ortools-vendor "Get or-tools from ortools-vendor" OFF)
 
 
 # Set C++ standard

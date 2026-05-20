@@ -13,7 +13,7 @@ jobs:
     env:
       ROS_DISTRO: ${{ matrix.ros_distro }}
     container:
-      image: rostooling/setup-ros-docker:uubuntu-resolute-ros-rolling-desktop-latest
+      image: rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-desktop-latest
     strategy:
       fail-fast: false
       matrix:

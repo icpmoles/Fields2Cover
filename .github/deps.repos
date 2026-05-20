@@ -1,5 +1,5 @@
 repositories:
-  ortools-vendor:
+  ortools_vendor:
     type: git
     url: https://github.com/Fields2Cover/ortools_vendor
     version: main

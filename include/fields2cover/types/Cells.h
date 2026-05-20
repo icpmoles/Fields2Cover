@@ -92,7 +92,7 @@ struct Cells : public Geometries<Cells, OGRMultiPolygon, wkbMultiPolygon,
 
   Point closestPointOnBorderTo(const Point& p) const;
 
-  int64_t countCollisions(const Point& a, const Point& b) const;
+  int64_t countCollisions(const Point& a, const Point& b, bool use_crossing) const;
 };
 
 

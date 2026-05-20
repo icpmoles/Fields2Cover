@@ -17,13 +17,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [jazzy, kilted]
+        ros_distro: [rolling, jazzy, kilted]
     steps:
       - name: checkout source
         uses: actions/checkout@v4
       - name: Build and run tests
         id: action-ros-ci
-        uses: ros-tooling/action-ros-ci@3a640b1 # v0.48
+        uses: ros-tooling/action-ros-ci@3a640b10f09b756dabe556dac5413aba369f71b0 # v0.48
         with:
           package-name: "fields2cover"
           target-ros2-distro: ${{ matrix.ros_distro }}

@@ -1,6 +1,6 @@
 /* File: fields2cover.i */
 
-#pragma SWIG nowarn=315,317,320,362,503,509
+#pragma SWIG nowarn=315,317,320,329,362,503,509
 
 %module fields2cover
  %include <std_string.i>

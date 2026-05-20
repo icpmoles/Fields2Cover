@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [rolling]
+        ros_distro: [jazzy, kilted]
     steps:
       - name: checkout source
         uses: actions/checkout@v4

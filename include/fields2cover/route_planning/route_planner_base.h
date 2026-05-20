@@ -35,11 +35,22 @@ class RoutePlannerBase {
   /// @param search_for_optimum If true, uses guided local search which may take longer
   ///        but can find more optimal solutions. If false, uses automatic search which is faster
   ///        but may find less optimal solutions.
+  /// @param dist_exponent
+  /// @param use_visibility
+  /// @param visibility_factor
+  /// @param use_crossing
   /// @return Route that covers all the swaths
-  virtual F2CRoute genRoute(
-      const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
-      bool show_log = false, double d_tol = 1e-4, bool redirect_swaths = true,
-      long int time_limit_seconds = 1, bool search_for_optimum = false);
+  virtual F2CRoute genRoute(const F2CCells& cells,
+       const F2CSwathsByCells& swaths_by_cells,
+       bool show_log = false,
+       double d_tol = 1e-4,
+       bool redirect_swaths = true,
+       long int time_limit_seconds = 1,
+       bool search_for_optimum = false,
+       float dist_exponent = 2,
+       bool use_visibility = false,
+       float visibility_factor = 2,
+       bool use_crossing = false);
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
@@ -61,10 +72,19 @@ class RoutePlannerBase {
   /// @param shortest_graph Graph to compute the shortest path
   ///          between two nodes.
   /// @param d_tol Tolerance distance to consider if two points are the same.
-  virtual F2CGraph2D createCoverageGraph(
-      const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
+  /// @param dist_exponent
+  /// @param use_visibility
+  /// @param visibility_factor
+  /// @param use_crossing
+  virtual F2CGraph2D createCoverageGraph(const F2CCells& cells,
+      const F2CSwathsByCells& swaths_by_cells,
       F2CGraph2D& shortest_graph,
-      double d_tol, bool redirect_swaths = true) const;
+      double d_tol,
+      bool redirect_swaths = true,
+      float dist_exponent = 2,
+      bool use_visibility = false,
+      float visibility_factor = 2,
+      bool use_crossing = false) const;
 
 
   virtual ~RoutePlannerBase() = default;

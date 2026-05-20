@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build and run tests
         id: action-ros-ci
-        uses: ros-tooling/action-ros-ci@v0.3
+        uses: ros-tooling/action-ros-ci@3a640b1 # v0.48
         with:
           package-name: "fields2cover"
           target-ros2-distro: ${{ matrix.ros_distro }}

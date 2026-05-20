@@ -252,10 +252,10 @@ Point Cells::closestPointOnBorderTo(const Point& p) const {
   }
   return ps[std::min_element(dist.begin(), dist.end()) - dist.begin()];
 }
-int64_t Cells::countCollisions(const Point& a, const Point& b) const {
+int64_t Cells::countCollisions(const Point& a, const Point& b, bool use_crossing) const {
   int64_t count = 0;
   for (const auto& cell: *this) {
-    count += cell.countCollisions(a, b);
+    count += cell.countCollisions(a, b, use_crossing);
   }
   return count;
 }

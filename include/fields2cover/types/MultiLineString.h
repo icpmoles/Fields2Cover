@@ -77,7 +77,6 @@ MultiLineString MultiLineString::intersection(
   return lines;
 }
 
-
 }  // namespace f2c::types
 
 #endif  // FIELDS2COVER_TYPES_MULTILINESTRING_H_

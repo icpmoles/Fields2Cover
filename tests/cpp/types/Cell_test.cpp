@@ -231,11 +231,11 @@ TEST(fields2cover_types_sstr, countIntersections) {
   F2CPoint left(1.25,3), right(3.75, 3.0), middle(2.5, 3.0);
   F2CPoint outside_right(4.5,3);
 
-  EXPECT_EQ(cell1.countCollisions(left, right), 2);
-  EXPECT_EQ(cell1.countCollisions(left, middle), 1);
-  EXPECT_EQ(cell1.countCollisions(right, middle), 1);
-  EXPECT_EQ(cell1.countCollisions(outside_right, middle), 1);
-  EXPECT_EQ(cell1.countCollisions(outside_right, right), 0);
+  EXPECT_EQ(cell1.countCollisions(left, right, false), 2);
+  EXPECT_EQ(cell1.countCollisions(left, middle, false), 1);
+  EXPECT_EQ(cell1.countCollisions(right, middle, false), 1);
+  EXPECT_EQ(cell1.countCollisions(outside_right, middle, false), 1);
+  EXPECT_EQ(cell1.countCollisions(outside_right, right, false), 0);
 
   F2CCell cell2;
   cell2.addRing(outer);
@@ -249,21 +249,21 @@ TEST(fields2cover_types_sstr, countIntersections) {
   cell2.addRing(inner_right);
 
 
-  EXPECT_EQ(cell2.countCollisions(left, right), 4);
-  EXPECT_EQ(cell2.countCollisions(left, middle), 2);
-  EXPECT_EQ(cell2.countCollisions(right, middle), 2);
-  EXPECT_EQ(cell2.countCollisions(outside_right, middle), 2);
-  EXPECT_EQ(cell2.countCollisions(outside_right, right), 0);
-  EXPECT_EQ(cell2.countCollisions(inside_left_inner, right), 3);
-  EXPECT_EQ(cell2.countCollisions(inside_left_inner, left), 1);
+  EXPECT_EQ(cell2.countCollisions(left, right, false), 4);
+  EXPECT_EQ(cell2.countCollisions(left, middle, false), 2);
+  EXPECT_EQ(cell2.countCollisions(right, middle, false), 2);
+  EXPECT_EQ(cell2.countCollisions(outside_right, middle, false), 2);
+  EXPECT_EQ(cell2.countCollisions(outside_right, right, false), 0);
+  EXPECT_EQ(cell2.countCollisions(inside_left_inner, right, false), 3);
+  EXPECT_EQ(cell2.countCollisions(inside_left_inner, left, false), 1);
 
   F2CCell cell_nonconvex;
   F2CLinearRing nc{
     F2CPoint(1,1), F2CPoint(2,2),F2CPoint(3,1),F2CPoint(2,4), F2CPoint(1,1)};
   cell_nonconvex.addRing(nc);
   F2CPoint a(1.5,1.75), b(2.5, 1.75), c(2, 3);
-  EXPECT_EQ(cell_nonconvex.countCollisions(a, b), 2);
-  EXPECT_EQ(cell_nonconvex.countCollisions(a, c), 0);
+  EXPECT_EQ(cell_nonconvex.countCollisions(a, b, false), 2);
+  EXPECT_EQ(cell_nonconvex.countCollisions(a, c, false), 0);
 
 
 }

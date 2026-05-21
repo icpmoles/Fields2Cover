@@ -13,14 +13,14 @@ jobs:
     env:
       ROS_DISTRO: ${{ matrix.ros_ubuntu_combo.ros_distro }}
     container:
-      image: ${{ matrix.ros_ubuntu_combo.image }}
+      image: rostooling/setup-ros-docker:ubuntu-${{ matrix.ros_ubuntu_combo.ubuntu }}-ros-rolling-ros-base-latest 
     strategy:
       fail-fast: false
       matrix:
         ros_ubuntu_combo: [
-          {image: "rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-ros-base-latest", ros_distro: "rolling"},
-          {image: "rostooling/setup-ros-docker:ubuntu-noble-ros-rolling-ros-base-latest", ros_distro: "jazzy"},
-          {image: "rostooling/setup-ros-docker:ubuntu-noble-ros-rolling-ros-base-latest", ros_distro: "kilted"}
+          {ubuntu: "resolute", ros_distro: "rolling"},
+          {ubuntu: "noble", ros_distro: "jazzy"},
+          {ubuntu: "noble", ros_distro: "kilted"}
         ]
     steps:
       - name: checkout source

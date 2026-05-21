@@ -8,16 +8,20 @@ on:
       - main
 
 jobs:
-  noble_rolling:
+  ros2:
     runs-on: ubuntu-24.04
     env:
-      ROS_DISTRO: ${{ matrix.ros_distro }}
+      ROS_DISTRO: ${{ matrix.ros_ubuntu_combo.ros_distro }}
     container:
-      image: rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-ros-base-latest
+      image: ${{ matrix.ros_ubuntu_combo.image }}
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [rolling]
+        ros_ubuntu_combo: [
+          {image: "rostooling/setup-ros-docker:ubuntu-resolute-ros-rolling-ros-base-latest", ros_distro: "rolling"},
+          {image: "rostooling/setup-ros-docker:ubuntu-noble-ros-rolling-ros-base-latest", ros_distro: "jazzy"},
+          {image: "rostooling/setup-ros-docker:ubuntu-noble-ros-rolling-ros-base-latest", ros_distro: "kilted"}
+        ]
     steps:
       - name: checkout source
         uses: actions/checkout@v4
@@ -26,7 +30,7 @@ jobs:
         uses: ros-tooling/action-ros-ci@3a640b10f09b756dabe556dac5413aba369f71b0 # v0.48
         with:
           package-name: "fields2cover"
-          target-ros2-distro: ${{ matrix.ros_distro }}
+          target-ros2-distro: ${{ matrix.ros_ubuntu_combo.ros_distro }}
           vcs-repo-file-url: "${{ github.workspace }}/.github/deps.repos"
           colcon-defaults: |
             {

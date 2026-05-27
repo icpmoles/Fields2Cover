@@ -54,12 +54,22 @@ template <class T, OGRwkbGeometryType R>
 Geometry<T, R>::Geometry(Geometry&& g) = default;
 
 template <class T, OGRwkbGeometryType R>
+#if defined(__clang__) // workaround for LLVM errors
 Geometry<T, R>& Geometry<T, R>::operator=(
     Geometry&& g) = default;
+#else
+typename Geometry<T, R>::Geometry& Geometry<T, R>::operator=(
+    Geometry&& g) = default;
+#endif
 
 template <class T, OGRwkbGeometryType R>
+#if defined(__clang__)
 Geometry<T, R>& Geometry<T, R>::operator=(
     const Geometry& g) = default;
+#else
+typename Geometry<T, R>::Geometry& Geometry<T, R>::operator=(
+    const Geometry& g) = default;
+#endif
 
 template <class T, OGRwkbGeometryType R>
 std::shared_ptr<T> Geometry<T, R>::operator->() {return data_;}

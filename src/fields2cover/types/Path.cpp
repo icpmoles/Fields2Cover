@@ -11,6 +11,21 @@
 
 namespace f2c::types {
 
+Path::Path() = default;
+
+Path::Path(const MultiPoint& mp, const double vel) {
+  for (int i = 0; i<mp.size(); i++) {
+    PathState ps;
+    ps.point = mp.getGeometry(i);
+    ps.angle = mp.getPointAngle(i);
+    ps.velocity = vel;
+    ps.len = (i < mp.size()-1) ? mp.getGeometry(i).distance(mp.getGeometry(i+1)) : 0.0;
+    ps.dir = types::PathDirection::FORWARD;
+    ps.type = types::PathSectionType::TURN;
+    this->addState(ps);
+  }
+}
+
 PathState& Path::getState(size_t i) {
   return this->states_[i];
 }

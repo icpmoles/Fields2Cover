@@ -88,3 +88,93 @@ TEST(fields2cover_types_route, init) {
 }
 
 
+TEST(fields2cover_types_route, convert_to_path) {
+  F2CRoute route;
+  F2CRobot robot(1., 2.);
+  F2CLineString line1({F2CPoint(1.0, 1.0), F2CPoint(1.0, 2.0), F2CPoint(1.0, 4.0)});
+  F2CSwath swath1(line1);
+  F2CMultiPoint conn12({F2CPoint(1.1, 4.0), F2CPoint(1.5, 4.0), F2CPoint(2.0, 4.0)});
+
+  F2CLineString line2({F2CPoint(2.0, 4.0), F2CPoint(2.0, 2.0), F2CPoint(2.0, 1.0)});
+  F2CSwath swath2(line2);
+  F2CMultiPoint conn23({F2CPoint(2.0, 1.0), F2CPoint(2.25, 0.75),
+      F2CPoint(2.75, 0.75), F2CPoint(3.0, 1.0)});
+
+  F2CLineString line3({F2CPoint(3.0, 1.0), F2CPoint(3.0, 2.0)});
+  F2CSwath swath3(line3);
+  F2CMultiPoint conn34({F2CPoint(3.0, 2.0), F2CPoint(4.0, 2.0)});
+
+  F2CLineString line4({F2CPoint(4.0, 2.0), F2CPoint(4.0, 1.0)});
+  F2CSwath swath4(line4);
+  F2CMultiPoint conn4end({F2CPoint(4.0, 1.0), F2CPoint(5.0, 1.0)});
+
+
+  route.addSwath(swath1);
+  route.addConnection(conn12);
+  route.addSwath(swath2);
+  route.addConnection(conn23);
+  route.addSwath(swath3);
+  route.addConnection(conn34);
+  route.addSwath(swath4);
+  route.addConnection(conn4end);
+
+  F2CPath path = route.asPath(robot);
+  size_t n = path.size();
+  EXPECT_EQ(n, 17);
+
+  EXPECT_EQ(path[0].point.getX(), line1.getGeometry(0).getX());
+  EXPECT_EQ(path[0].point.getY(), line1.getGeometry(0).getY());
+  EXPECT_EQ(path[0].angle, .5*M_PI);
+  EXPECT_EQ(path[0].type, f2c::types::PathSectionType::SWATH);
+
+  EXPECT_EQ(path[1].point.getX(), line1.getGeometry(1).getX());
+  EXPECT_EQ(path[1].point.getY(), line1.getGeometry(1).getY());
+  EXPECT_EQ(path[1].angle, .5*M_PI);
+  EXPECT_EQ(path[1].type, f2c::types::PathSectionType::SWATH);
+
+  EXPECT_EQ(path[2].point.getX(), conn12.getGeometry(0).getX());
+  EXPECT_EQ(path[2].point.getY(), conn12.getGeometry(0).getY());
+  EXPECT_EQ(path[2].angle, 0);
+  EXPECT_EQ(path[2].type, f2c::types::PathSectionType::TURN);
+
+  EXPECT_EQ(path[n-3].point.getX(), line4.getGeometry(0).getX());
+  EXPECT_EQ(path[n-3].point.getY(), line4.getGeometry(0).getY());
+  EXPECT_EQ(path[n-3].angle,1.5*M_PI);
+  EXPECT_EQ(path[n-3].type, f2c::types::PathSectionType::SWATH);
+
+  EXPECT_EQ(path[n-2].point.getX(), conn4end.getGeometry(0).getX());
+  EXPECT_EQ(path[n-2].point.getY(), conn4end.getGeometry(0).getY());
+  EXPECT_EQ(path[n-2].angle,0);
+  EXPECT_EQ(path[n-2].type, f2c::types::PathSectionType::TURN);
+
+  EXPECT_EQ(path[n-1].point.getX(), conn4end.getGeometry(1).getX());
+  EXPECT_EQ(path[n-1].point.getY(), conn4end.getGeometry(1).getY());
+  EXPECT_EQ(path[n-1].angle,0);
+  EXPECT_EQ(path[n-1].type, f2c::types::PathSectionType::TURN);
+
+
+  F2CRoute route_with_deposit;
+
+  F2CMultiPoint conndep1({F2CPoint(0.0, 0.0), F2CPoint(1.0, 1.0)});
+  F2CLineString wd_line1({F2CPoint(1.0, 1.0), F2CPoint(1.0, 2.0), F2CPoint(1.0, 4.0)});
+  F2CSwath wd_swath1(wd_line1);
+  F2CMultiPoint wd_conn12({F2CPoint(1.1, 4.0), F2CPoint(1.5, 4.0), F2CPoint(2.0, 4.0)});
+
+  F2CLineString wd_line2({F2CPoint(2.0, 4.0), F2CPoint(2.0, 2.0), F2CPoint(2.0, 1.0)});
+  F2CSwath wd_swath2(wd_line2);
+  F2CMultiPoint wd_conn2dep({F2CPoint(2.0, 1.0), F2CPoint(2.0, 0.0),
+      F2CPoint(1.0, 0.0), F2CPoint(0.0, 0.0)});
+
+  route_with_deposit.addConnection(conndep1);
+  route_with_deposit.addSwath(wd_swath1);
+  route_with_deposit.addConnection(wd_conn12);
+  route_with_deposit.addSwath(wd_swath2);
+  route_with_deposit.addConnection(wd_conn2dep);
+
+  F2CPath path_wd = route_with_deposit.asPath(robot);
+  size_t wd_n =path_wd.size();
+  EXPECT_EQ(wd_n,2+2+3+2+4);
+  EXPECT_EQ(path_wd[0].point.getX(), path_wd[wd_n-1].point.getX());
+  EXPECT_EQ(path_wd[0].point.getY(), path_wd[wd_n-1].point.getY());
+
+}

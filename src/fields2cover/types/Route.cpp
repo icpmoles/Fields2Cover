@@ -191,6 +191,22 @@ Route Route::clone() const {
   return new_r;
 }
 
+Path Route::asPath(Robot& robot) {
+  Path path;
+  const double vel = robot.getCruiseVel();
+  if (connections_.size() > 0) {
+    path += Path(this->getConnection(0), vel);
+  }
+  for (size_t i = 0; i < v_swaths_.size(); ++i) {
+    for (auto&& swath : v_swaths_[i]) {
+      path.appendSwath(swath,vel);
+    }
+    if ((connections_.size() > i + 1)) {
+      path +=   Path(this->getConnection(i+1), vel);
+    }
+  }
+  return path;
+}
 
 }  // namespace f2c::types
 

@@ -5,6 +5,7 @@
 //=============================================================================
 
 #include "fields2cover/types/MultiPoint.h"
+#include "fields2cover/types/Robot.h"
 
 namespace f2c::types {
 
@@ -136,8 +137,6 @@ double MultiPoint::getPointAngle(size_t i) const {
   }
   return getAngleAvg(getInAngle(i), getOutAngle(i));
 }
-
-
 
 }  // namespace f2c::types
 

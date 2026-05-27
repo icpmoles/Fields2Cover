@@ -123,7 +123,7 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
       }
     }
   }
-  std::clock_t start_clock = 0;
+  // std::clock_t start_clock = 0;
   int64_t counter = 0;
   int64_t total_nodes = swaths_by_cells.sizeTotal()*swaths_by_cells.sizeTotal();
   for (const auto& swaths1 : swaths_by_cells) {
@@ -136,9 +136,9 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
             std::cout << counter << "/" << total_nodes << " = " << (counter*1.0/total_nodes)*100.0 << "%"  << std::endl;
           }
           counter++;
-          if (counter==2) {
-            start_clock = std::clock();
-          }
+          // if (counter==2) {
+          //   start_clock = std::clock();
+          // }
           auto s2_s = s2.startPoint();
           auto s2_e = s2.endPoint();
           if (redirect_swaths) {
@@ -164,8 +164,8 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
     }
   }
 
-  const auto end_time = std::clock();
-  std::cout << "TIME" << float( end_time - start_clock ) /  CLOCKS_PER_SEC;
+  // const auto end_time = std::clock();
+  // std::cout << "TIME" << float( end_time - start_clock ) /  CLOCKS_PER_SEC << std::endl;
 
   F2CPoint deposit(-1e8, -1e8);  // Arbitrary point
   if (this->r_start_end) {

@@ -496,7 +496,7 @@ TEST(fields2cover_types_path, discretize_swath) {
       state2.point, 0.5 * boost::math::constants::half_pi<double>(), false));
 }
 
-TEST(fields2cover_types_multipoint, multipoint_to_path) {
+TEST(fields2cover_types_path, multipoint_to_path) {
   F2CRobot robot(1., 2.);
   F2CMultiPoint zigzag{F2CPoint(1,1), F2CPoint(2,2),
     F2CPoint(3,1), F2CPoint(4,2)};
@@ -511,15 +511,15 @@ TEST(fields2cover_types_multipoint, multipoint_to_path) {
   EXPECT_EQ(zz_path[0].point.getY(), 1);
   EXPECT_EQ(zz_path[0].len, sqrt(2));
 
-  EXPECT_EQ(zz_path[1].angle, 2.0 * M_PI);
+  EXPECT_EQ(zz_path[1].angle, 7.0 * M_PI / 4.0);
   EXPECT_EQ(zz_path[1].point.getX(), 2);
   EXPECT_EQ(zz_path[1].point.getY(), 2);
   EXPECT_EQ(zz_path[1].len, sqrt(2));
 
-  EXPECT_EQ(zz_path[2].angle, 2.0 * M_PI);
+  EXPECT_EQ(zz_path[2].angle, M_PI / 4.0);
   EXPECT_EQ(zz_path[2].len, sqrt(2));
 
-  EXPECT_EQ(zz_path[3].angle, M_PI / 4.0);
+  EXPECT_EQ(zz_path[3].angle, 0.0);
   EXPECT_EQ(zz_path[3].len, 0);
 
   F2CMultiPoint arc{F2CPoint(1,1), F2CPoint(1,2),
@@ -532,12 +532,12 @@ TEST(fields2cover_types_multipoint, multipoint_to_path) {
   EXPECT_EQ(arc_path[0].angle, M_PI / 2.0);
   EXPECT_EQ(arc_path[0].len, 1);
 
-  EXPECT_EQ(arc_path[1].angle, M_PI / 4.0);
+  EXPECT_EQ(arc_path[1].angle, 0.0);
   EXPECT_EQ(arc_path[1].len, 1);
 
-  EXPECT_EQ(arc_path[2].angle, 7.0 * M_PI / 4.0 );
+  EXPECT_EQ(arc_path[2].angle, 3.0 * M_PI / 2.0 );
   EXPECT_EQ(arc_path[2].len, 1);
 
-  EXPECT_EQ(arc_path[3].angle, 3.0 * M_PI / 2.0);
+  EXPECT_EQ(arc_path[3].angle, 0.0);
   EXPECT_EQ(arc_path[3].len, 0);
 }

@@ -6,7 +6,7 @@
 
 #include "fields2cover/types/Route.h"
 
-#include "../../../../f2c_main/include/fields2cover/types.h"
+#include "fields2cover/types.h"
 
 namespace f2c::types {
 

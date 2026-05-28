@@ -507,9 +507,13 @@ TEST(fields2cover_types_multipoint, multipoint_to_path) {
 
 
   EXPECT_EQ(zz_path[0].angle, M_PI / 4.0);
+  EXPECT_EQ(zz_path[0].point.getX(), 1);
+  EXPECT_EQ(zz_path[0].point.getY(), 1);
   EXPECT_EQ(zz_path[0].len, sqrt(2));
 
   EXPECT_EQ(zz_path[1].angle, 2.0 * M_PI);
+  EXPECT_EQ(zz_path[1].point.getX(), 2);
+  EXPECT_EQ(zz_path[1].point.getY(), 2);
   EXPECT_EQ(zz_path[1].len, sqrt(2));
 
   EXPECT_EQ(zz_path[2].angle, 2.0 * M_PI);

@@ -6,6 +6,8 @@
 
 #include "fields2cover/types/Route.h"
 
+#include "../../../../f2c_main/include/fields2cover/types.h"
+
 namespace f2c::types {
 
 const std::vector<Swaths>& Route::getVectorSwaths() const {
@@ -194,7 +196,7 @@ Route Route::clone() const {
 Path Route::asPath(Robot& robot) {
   Path path;
   const double vel = robot.getCruiseVel();
-  if (connections_.size() > 0) {
+  if (!connections_.empty()) {
     path += Path(this->getConnection(0), vel);
   }
   for (size_t i = 0; i < v_swaths_.size(); ++i) {
@@ -202,7 +204,13 @@ Path Route::asPath(Robot& robot) {
       path.appendSwath(swath,vel);
     }
     if ((connections_.size() > i + 1)) {
-      path +=   Path(this->getConnection(i+1), vel);
+      if (!this->getConnection(i+1).isEmpty()) {
+        path +=   Path(this->getConnection(i+1), vel);
+      } else {
+        const F2CMultiPoint sw2sw{v_swaths_.at(i).back().endPoint(),v_swaths_.at(i+1).at(0).startPoint()};
+        path +=   Path(sw2sw, vel);
+      }
+
     }
   }
   return path;

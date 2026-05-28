@@ -17,7 +17,7 @@ Path::Path(const MultiPoint& mp, const double vel) {
   for (int i = 0; i<mp.size(); i++) {
     PathState ps;
     ps.point = mp.getGeometry(i);
-    ps.angle = mp.getPointAngle(i);
+    ps.angle = (i < mp.size()-1) ? mp.getOutAngle(i) : 0.0;
     ps.velocity = vel;
     ps.len = (i < mp.size()-1) ? mp.getGeometry(i).distance(mp.getGeometry(i+1)) : 0.0;
     ps.dir = types::PathDirection::FORWARD;

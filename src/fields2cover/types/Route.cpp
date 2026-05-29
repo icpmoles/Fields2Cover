@@ -210,7 +210,6 @@ Path Route::asPath(Robot& robot, bool use_filter, double filter_distance, double
     if ((connections_.size() > i + 1)) {
       if (!this->getConnection(i+1).isEmpty()) {
         if (use_filter) {
-          std::cout << "smoothing!! " << std::endl;
           path += Path(this->getConnection(i+1).smoothify(filter_distance, filter_alpha), vel);
         } else {
           path += Path(this->getConnection(i+1), vel);

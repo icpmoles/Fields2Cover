@@ -194,6 +194,10 @@ Route Route::clone() const {
 }
 
 Path Route::asPath(Robot& robot, bool use_filter, double filter_distance, double filter_alpha) {
+  if (filter_alpha>1.0 || filter_alpha<0.0) {
+    throw std::out_of_range("Filter_alpha needs to be between 0 and 1");
+  }
+
   Path path;
   const double vel = robot.getCruiseVel();
   if (!connections_.empty()) {

@@ -139,7 +139,7 @@ double MultiPoint::getPointAngle(size_t i) const {
 }
 
 
-MultiPoint MultiPoint::densify(double length) {
+MultiPoint MultiPoint::densify(double length) const{
   MultiPoint mp;
   // Point prev_p = this->getGeometry(0);
   // std::cout << " first_point "<< prev_p << std::endl;
@@ -150,7 +150,7 @@ MultiPoint MultiPoint::densify(double length) {
   for (int i = 0; i < this->size()-1; i++) {
     Point prev_p = this->getGeometry(i);
     Point p = this->getGeometry(i+1);
-    double     angle = this->getOutAngle(i);
+    double angle = this->getOutAngle(i);
     if (mp.size()==0) {
       mp.addPoint(prev_p);
     }
@@ -183,6 +183,27 @@ MultiPoint MultiPoint::densify(double length) {
   }
 
   return mp;
+}
+
+// taken from: https://en.wikipedia.org/wiki/Low-pass_filter#Discrete-time_realization
+MultiPoint MultiPoint::low_pass_filter(double alpha) const {
+  MultiPoint mp;
+  mp.addPoint(this->getFirstPoint());
+  for (int i = 1; i < this->size(); i++) {
+    Point new_p(
+      mp.back().getX()+ alpha * (this->getGeometry(i).getX() - mp.back().getX()),
+      mp.back().getY()+ alpha * (this->getGeometry(i).getY() - mp.back().getY())
+    );
+    mp.addPoint(new_p);
+  }
+  return mp;
+}
+MultiPoint MultiPoint::smoothify(double length, double alpha) const{
+  std::cout << "MultiPoint::smoothify-> starting from:" << this->size();
+  auto ret =  this->densify(length).low_pass_filter(alpha);
+
+  std::cout << " to "<< ret.size() << std::endl;
+  return ret;
 }
 
 }  // namespace f2c::types

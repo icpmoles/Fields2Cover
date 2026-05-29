@@ -118,7 +118,7 @@ TEST(fields2cover_types_route, convert_to_path) {
   route.addSwath(swath4);
   route.addConnection(conn4end);
 
-  F2CPath path = route.asPath(robot);
+  F2CPath path = route.asPath(robot, false, 0.1, 0.5);
   size_t n = path.size();
   EXPECT_EQ(n, 17);
 
@@ -171,7 +171,7 @@ TEST(fields2cover_types_route, convert_to_path) {
   route_with_deposit.addSwath(wd_swath2);
   route_with_deposit.addConnection(wd_conn2dep);
 
-  F2CPath path_wd = route_with_deposit.asPath(robot);
+  F2CPath path_wd = route_with_deposit.asPath(robot, false, 0.1, 0.5);
   size_t wd_n =path_wd.size();
   EXPECT_EQ(wd_n,2+2+3+2+4);
   EXPECT_EQ(path_wd[0].point.getX(), path_wd[wd_n-1].point.getX());

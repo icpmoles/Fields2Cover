@@ -47,7 +47,24 @@ struct MultiPoint :
 
   void operator*=(double b);
 
-  MultiPoint densify(double length);
+  /**
+   *
+   * @param length distance between segment
+   * @return a densified sequence of point of with a specified distance between each others
+   */
+  MultiPoint densify(double length) const;
+
+
+  MultiPoint low_pass_filter(double alpha) const;
+
+  /**
+   *
+   * @param length in m of the discretization.
+   * @param alpha [0,1], the smoothing factor's step constant: check the wikipedia page
+   * https://en.wikipedia.org/wiki/Low-pass_filter#Discrete-time_realization
+   * @return smoothed curve
+   */
+  MultiPoint smoothify(double length, double alpha) const;
 };
 
 }  // namespace f2c::types

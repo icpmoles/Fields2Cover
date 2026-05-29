@@ -63,7 +63,7 @@ struct Route {
   bool isEmpty() const;
   Route clone() const;
 
-  Path asPath(Robot& robot);
+  Path asPath(Robot& robot, bool use_filter, double filter_distance, double filter_alpha);
 
  private:
   std::vector<Swaths> v_swaths_;

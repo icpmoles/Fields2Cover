@@ -147,5 +147,73 @@ double MultiPoint::getPointAngle(size_t i) const {
   return getAngleAvg(getInAngle(i), getOutAngle(i));
 }
 
+
+MultiPoint MultiPoint::densify(double length) const{
+  MultiPoint mp;
+  // Point prev_p = this->getGeometry(0);
+  // std::cout << " first_point "<< prev_p << std::endl;
+  // mp.addPoint(prev_p);
+
+  double cumulated_length = 0.0;
+  bool jump = false;
+  for (int i = 0; i < this->size()-1; i++) {
+    Point prev_p = this->getGeometry(i);
+    Point p = this->getGeometry(i+1);
+    double angle = this->getOutAngle(i);
+    if (mp.size()==0) {
+      mp.addPoint(prev_p);
+    }
+    const double segment_length = prev_p.distance(p);
+    double remaining_length = segment_length;
+
+    while (remaining_length > length) {
+      if (!jump) {
+        Point temp = mp.back().getPointFromAngle(angle, length);
+        mp.addPoint(temp);
+        remaining_length -= length;
+      } else {
+        Point temp = prev_p.getPointFromAngle(angle, length-cumulated_length);
+        mp.addPoint(temp);
+        jump = false;
+        remaining_length -= (length-cumulated_length);
+        cumulated_length = 0;
+      }
+    }
+
+    cumulated_length = remaining_length;
+    // end of last iteration, we can just assign even if it's shorter
+    if (i == this->size() - 2 && mp.back().distance(p) > 1e-7) {
+      mp.addPoint(p);
+      continue;
+    }
+
+    // prev_p = p;
+    jump = true;
+  }
+
+  return mp;
+}
+
+// taken from: https://en.wikipedia.org/wiki/Low-pass_filter#Discrete-time_realization
+MultiPoint MultiPoint::low_pass_filter(double alpha) const {
+  MultiPoint mp;
+  mp.addPoint(this->getFirstPoint());
+  for (int i = 1; i < this->size(); i++) {
+    Point new_p(
+      mp.back().getX()+ alpha * (this->getGeometry(i).getX() - mp.back().getX()),
+      mp.back().getY()+ alpha * (this->getGeometry(i).getY() - mp.back().getY())
+    );
+    mp.addPoint(new_p);
+  }
+  return mp;
+}
+MultiPoint MultiPoint::smoothify(double length, double alpha) const{
+  std::cout << "MultiPoint::smoothify-> starting from:" << this->size();
+  auto ret =  this->densify(length).low_pass_filter(alpha);
+
+  std::cout << " to "<< ret.size() << std::endl;
+  return ret;
+}
+
 }  // namespace f2c::types
 

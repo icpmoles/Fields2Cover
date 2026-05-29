@@ -46,6 +46,8 @@ struct MultiPoint :
   double getPointAngle(size_t i) const;
 
   void operator*=(double b);
+
+  MultiPoint densify(double length);
 };
 
 }  // namespace f2c::types

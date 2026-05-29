@@ -107,3 +107,47 @@ TEST(fields2cover_types_multipoint, getAngles) {
   EXPECT_EQ(ps2.size(), 1);
   EXPECT_THROW(ps2.getPointAngle(0), std::invalid_argument);
 }
+
+
+TEST(fields2cover_types_multipoint, densify) {
+   F2CMultiPoint ps1{F2CPoint(1,1), F2CPoint(1,2), F2CPoint(2, 2), F2CPoint(2, 1)};
+
+  F2CMultiPoint dense1 = ps1.densify(0.2);
+  EXPECT_EQ(dense1.size(), 16);
+
+  EXPECT_EQ(dense1.getGeometry(0).getX(), 1);
+  EXPECT_EQ(dense1.getGeometry(0).getY(), 1);
+
+  EXPECT_NEAR(dense1.back().getX(), 2,1e-7);
+  EXPECT_NEAR(dense1.back().getY(), 1, 1e-7);
+
+
+  F2CMultiPoint dense2 = ps1.densify(0.3);
+  EXPECT_EQ(dense2.size(), 11);
+  EXPECT_EQ(dense2.getGeometry(0).getX(), 1);
+  EXPECT_EQ(dense2.getGeometry(0).getY(), 1);
+  EXPECT_NEAR(dense2.getGeometry(1).getX(), 1, 1e-7);
+  EXPECT_NEAR(dense2.getGeometry(1).getY(), 1.3, 1e-7);
+  EXPECT_NEAR(dense2.getGeometry(2).getX(), 1, 1e-7);
+  EXPECT_NEAR(dense2.getGeometry(2).getY(), 1.6, 1e-7);
+
+
+  EXPECT_NEAR(dense2.getGeometry(dense2.size()-2).getX(), 2, 1e-7);
+  EXPECT_NEAR(dense2.getGeometry(dense2.size()-2).getY(), 1.3, 1e-7);
+  EXPECT_NEAR(dense2.back().getX(), 2,1e-7);
+  EXPECT_NEAR(dense2.back().getY(), 1, 1e-7);
+
+
+
+  F2CMultiPoint dense3 = ps1.densify(0.4);
+  EXPECT_EQ(dense3.size(), 9);
+  EXPECT_EQ(dense3.getGeometry(0).getX(), 1);
+  EXPECT_EQ(dense3.getGeometry(0).getY(), 1);
+
+  EXPECT_NEAR(dense3.getGeometry(1).getX(), 1, 1e-7);
+  EXPECT_NEAR(dense3.getGeometry(1).getY(), 1.4, 1e-7);
+  EXPECT_NEAR(dense3.back().getX(), 2,1e-7);
+  EXPECT_NEAR(dense3.back().getY(), 1, 1e-7);
+
+
+}

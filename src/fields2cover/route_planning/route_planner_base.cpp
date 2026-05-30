@@ -30,12 +30,19 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     float dist_exponent,
     bool use_visibility,
     float visibility_factor,
-    bool use_crossing) {
-  F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol);
+    bool visibility_use_crossing,
+    bool prefer_crossings)
+{
+  for (auto cell : cells) {
+    // F2CGraph2D dummy;
+    pessimistic_traversal_ += cell.getExteriorRing().getMinSafeLength()*100;
+  }
+  std::cout<< "pessimistic: " << pessimistic_traversal_ << std::endl;
 
-  F2CGraph2D cov_graph = createCoverageGraph(
-      cells, swaths, shortest_graph, d_tol, redirect_swaths, dist_exponent, use_visibility,
-      visibility_factor, use_crossing);
+  F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol, prefer_crossings);
+
+  F2CGraph2D cov_graph = createCoverageGraph(cells, swaths, shortest_graph, d_tol, redirect_swaths,
+      dist_exponent, use_visibility, visibility_factor, visibility_use_crossing, prefer_crossings);
 
   std::vector<long long int> v_route = computeBestRoute(
       cov_graph, show_log, time_limit_seconds, search_for_optimum);
@@ -47,19 +54,37 @@ void RoutePlannerBase::setStartAndEndPoint(const F2CPoint& p) {
   this->r_start_end = p;
 }
 
-F2CGraph2D RoutePlannerBase::createShortestGraph(
-    const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
-    double d_tol) const {
+F2CGraph2D RoutePlannerBase::createShortestGraph(const F2CCells& cells,
+    const F2CSwathsByCells& swaths_by_cells,
+    double d_tol,
+    bool allow_crossings) const {
   F2CGraph2D g;
   // Add points from swaths that touches border
   for (auto&& swaths : swaths_by_cells) {
     for (auto&& s : swaths) {
       g.addEdge(s.startPoint(), cells.closestPointOnBorderTo(s.startPoint()));
-      g.addEdge(s.endPoint(),   cells.closestPointOnBorderTo(s.endPoint()));
-      // const int64_t swath_cost = 1e7 + g.getScalingFactor()*pow((s.length()*20.0),1.5);
-      // g.addEdge(s.startPoint(), s.endPoint(),swath_cost);
+      g.addEdge(s.endPoint(),cells.closestPointOnBorderTo(s.endPoint()));
+      // if crossings are not allowed, give the option to route through the swaths. At a penalty.
+      if (!allow_crossings) {
+        const int64_t swath_cost = g.getScalingFactor()*(s.length() + pessimistic_traversal_);
+        g.addEdge(s.startPoint(), s.endPoint(),swath_cost);
+      }
     }
   }
+
+
+  // double crossing_penalty = 2.0*pessimistic_traversal_;
+  // if (crossing_factor > 0.0) {
+  //   crossing_penalty = (2.0-crossing_factor)*pessimistic_traversal_;
+  // }
+  // for (auto&& s : swaths) {
+  //   g.addEdge(s.startPoint(), cells.closestPointOnBorderTo(s.startPoint()));
+  //   g.addEdge(s.endPoint(),   cells.closestPointOnBorderTo(s.endPoint()));
+  //   if (crossing_factor > 0.0) {
+  //     // std::cout  <<  "x-ing" << std::endl;
+  //     double swath_cost = pow(s.length() + crossing_penalty,2) *g.getScalingFactor();
+  //     g.addEdge(s.startPoint(), s.endPoint(), swath_cost);
+  //   }
 
   // Add points in the border
   for (auto&& cell : cells) {
@@ -107,8 +132,13 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
     bool redirect_swaths,
     float dist_exponent,
     bool use_visibility,
-    float visibility_factor,
-    bool use_crossing) const {
+    double visibility_factor,
+    bool visibility_use_crossing,
+    bool prefer_crossings) const {
+  if (prefer_crossings == true && use_visibility == false) {
+    throw std::invalid_argument("You can only prefer crossings if you allow for visbility checks");
+  }
+
   F2CGraph2D g;
   int64_t INF = 1<<29;
   for (auto&& swaths : swaths_by_cells) {
@@ -145,14 +175,31 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
             for (auto a: {s1_s, s1_e}) {
               for (auto b: {s2_s, s2_e}) {
                 int64_t cost_function = shortest_graph.shortestPathCost(a,b);
-                // if (cost_function > INF) {
-                if ( cost_function > INF || use_visibility ) {
-                   // std::cout << "found unconnected case " <<a << " & " << b<< std::endl ;
-                  const int64_t l2_d = a.distance(b)*shortest_graph.getScalingFactor();
-                  const int64_t collisions = (use_visibility) ? cells.countCollisions(a, b, use_crossing) : 0;
-                  cost_function +=  INF * ( collisions * visibility_factor);
-                  cost_function += pow(l2_d, dist_exponent);
+                const int64_t l2_d = a.distance(b);
+
+                // otherwise if we explicitly want to allow crossings we use a custom cost
+                // function that will create crossings between rings
+                if (prefer_crossings) {
+                  // std::cout << "prefer crossings" << std::endl;
+                  const int64_t collisions = cells.countCollisions(a, b, visibility_use_crossing);
+                  if (l2_d < cost_function && collisions == 0) {
+                    cost_function = l2_d*shortest_graph.getScalingFactor();
+                  } else {
+                    cost_function +=  pessimistic_traversal_ * ( collisions * visibility_factor) *shortest_graph.getScalingFactor();
+                    cost_function += pow(l2_d*shortest_graph.getScalingFactor(), dist_exponent);
+                  }
                 }
+                // if there is no direct path between two nodes we check the visibility as last
+                // resort to allow a graceful failure
+                else if ( cost_function > INF ) {
+                  // std::cout << "disconn rings detected" << a << b << std::endl;
+
+                  const int64_t collisions = (use_visibility) ? cells.countCollisions(a, b, visibility_use_crossing) : 0;
+
+                  cost_function +=  pessimistic_traversal_ * ( collisions * visibility_factor) *shortest_graph.getScalingFactor();
+                  cost_function += pow(l2_d*shortest_graph.getScalingFactor(), dist_exponent);
+                }
+
                 g.addEdge(a, b, cost_function);
               }
             }

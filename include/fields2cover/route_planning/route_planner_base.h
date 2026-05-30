@@ -38,7 +38,8 @@ class RoutePlannerBase {
   /// @param dist_exponent
   /// @param use_visibility
   /// @param visibility_factor
-  /// @param use_crossing
+  /// @param visibility_use_crossing
+  /// @param prefer_crossings
   /// @return Route that covers all the swaths
   virtual F2CRoute genRoute(const F2CCells& cells,
        const F2CSwathsByCells& swaths_by_cells,
@@ -50,7 +51,8 @@ class RoutePlannerBase {
        float dist_exponent = 2,
        bool use_visibility = false,
        float visibility_factor = 2,
-       bool use_crossing = false);
+       bool visibility_use_crossing = false,
+       bool prefer_crossings = 0);
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
@@ -61,9 +63,11 @@ class RoutePlannerBase {
   /// @param cells Headland swath rings used to travel through the headlands
   /// @param swaths_by_cells Swaths to be covered.
   /// @param d_tol Tolerance distance to consider if two points are the same.
-  virtual F2CGraph2D createShortestGraph(
-      const F2CCells& cells, const F2CSwathsByCells& swaths_by_cells,
-      double d_tol) const;
+  /// @param allow_crossings
+  virtual F2CGraph2D createShortestGraph(const F2CCells& cells,
+      const F2CSwathsByCells& swaths_by_cells,
+      double d_tol,
+      bool allow_crossings) const;
 
   /// Create graph to compute the cost of covering the swaths in a given order.
   ///
@@ -75,7 +79,8 @@ class RoutePlannerBase {
   /// @param dist_exponent
   /// @param use_visibility
   /// @param visibility_factor
-  /// @param use_crossing
+  /// @param visibility_use_crossing
+  /// @param prefer_crossings
   virtual F2CGraph2D createCoverageGraph(const F2CCells& cells,
       const F2CSwathsByCells& swaths_by_cells,
       F2CGraph2D& shortest_graph,
@@ -83,8 +88,9 @@ class RoutePlannerBase {
       bool redirect_swaths = true,
       float dist_exponent = 2,
       bool use_visibility = false,
-      float visibility_factor = 2,
-      bool use_crossing = false) const;
+      double visibility_factor = 2,
+      bool visibility_use_crossing = false,
+      bool prefer_crossings = false) const;
 
 
   virtual ~RoutePlannerBase() = default;
@@ -110,6 +116,9 @@ class RoutePlannerBase {
 
  protected:
   std::optional<F2CPoint> r_start_end;
+
+ private:
+  double pessimistic_traversal_ = 0.0;
 };
 
 

@@ -39,10 +39,12 @@ class RoutePlannerBase {
   /// @param use_visibility
   /// @param visibility_factor
   /// @param visibility_use_crossing
-  /// @param prefer_crossings
+  /// @param prefer_inter_rings_crossing
+  /// @param free_space_planner
   /// @return Route that covers all the swaths
   virtual F2CRoute genRoute(const F2CCells& cells,
        const F2CSwathsByCells& swaths_by_cells,
+       std::string& timings_array_dest,
        bool show_log = false,
        double d_tol = 1e-4,
        bool redirect_swaths = true,
@@ -52,7 +54,8 @@ class RoutePlannerBase {
        bool use_visibility = false,
        float visibility_factor = 2,
        bool visibility_use_crossing = false,
-       bool prefer_crossings = 0);
+       bool prefer_inter_rings_crossing = false,
+       bool free_space_planner = true);
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
@@ -63,11 +66,11 @@ class RoutePlannerBase {
   /// @param cells Headland swath rings used to travel through the headlands
   /// @param swaths_by_cells Swaths to be covered.
   /// @param d_tol Tolerance distance to consider if two points are the same.
-  /// @param allow_crossings
+  /// @param free_space_planner
   virtual F2CGraph2D createShortestGraph(const F2CCells& cells,
       const F2CSwathsByCells& swaths_by_cells,
       double d_tol,
-      bool allow_crossings) const;
+      bool free_space_planner) const;
 
   /// Create graph to compute the cost of covering the swaths in a given order.
   ///
@@ -81,6 +84,7 @@ class RoutePlannerBase {
   /// @param visibility_factor
   /// @param visibility_use_crossing
   /// @param prefer_crossings
+  /// @param free_space_planner
   virtual F2CGraph2D createCoverageGraph(const F2CCells& cells,
       const F2CSwathsByCells& swaths_by_cells,
       F2CGraph2D& shortest_graph,
@@ -90,7 +94,8 @@ class RoutePlannerBase {
       bool use_visibility = false,
       double visibility_factor = 2,
       bool visibility_use_crossing = false,
-      bool prefer_crossings = false) const;
+      bool prefer_crossings = false,
+      bool free_space_planner = false) const;
 
 
   virtual ~RoutePlannerBase() = default;

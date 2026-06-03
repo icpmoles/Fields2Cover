@@ -115,7 +115,8 @@ F2CRoute planCovRoute(const F2CRobot& robot, const F2CCells& cells,
           opt.sg_angle, robot.getCovWidth(), mainland);
   }
   f2c::rp::RoutePlannerBase rp;
-  return rp.genRoute(fast_hl_rings, swaths);
+  std::string ss;
+  return rp.genRoute(fast_hl_rings, swaths, ss);
 }
 
 F2CRoute planCovRoute(const F2CRobot& robot, const F2CField& field,

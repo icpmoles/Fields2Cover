@@ -8,13 +8,14 @@
 #include <ortools/constraint_solver/routing_enums.pb.h>
 #include <ortools/constraint_solver/routing_index_manager.h>
 #include <ortools/constraint_solver/routing_parameters.h>
-#include <math.h>
+#include <cmath>
 #include <utility>
 #include <vector>
 #include <limits>
 #include "fields2cover/route_planning/route_planner_base.h"
 #include <ctime>
-
+#include <chrono>
+using namespace std::chrono;
 
 namespace f2c::rp {
 
@@ -22,6 +23,7 @@ namespace ortools = operations_research;
 
 F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     const F2CSwathsByCells& swaths,
+    std::string& timings_array_dest,
     bool show_log,
     double d_tol,
     bool redirect_swaths,
@@ -31,7 +33,8 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     bool use_visibility,
     float visibility_factor,
     bool visibility_use_crossing,
-    bool prefer_crossings)
+    bool prefer_inter_rings_crossing,
+    bool free_space_planner)
 {
   for (auto cell : cells) {
     // F2CGraph2D dummy;
@@ -39,15 +42,41 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
   }
   std::cout<< "pessimistic: " << pessimistic_traversal_ << std::endl;
 
-  F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol, prefer_crossings);
+  auto start_sg = high_resolution_clock::now();
+  F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol, free_space_planner);
+  auto end_sg_start_cg = high_resolution_clock::now();
+
+  auto duration_1 = duration_cast<milliseconds>(end_sg_start_cg - start_sg);
+
 
   F2CGraph2D cov_graph = createCoverageGraph(cells, swaths, shortest_graph, d_tol, redirect_swaths,
-      dist_exponent, use_visibility, visibility_factor, visibility_use_crossing, prefer_crossings);
+      dist_exponent, use_visibility, visibility_factor, visibility_use_crossing,
+      prefer_inter_rings_crossing, free_space_planner);
+  auto end_cg_start_vpr = high_resolution_clock::now();
+
+
+  auto duration_2 = duration_cast<milliseconds>(end_cg_start_vpr - end_sg_start_cg);
 
   std::vector<long long int> v_route = computeBestRoute(
       cov_graph, show_log, time_limit_seconds, search_for_optimum);
-  return transformSolutionToRoute(
+
+  auto end_vpr_start_trans = high_resolution_clock::now();
+
+  auto duration_3 = duration_cast<milliseconds>(end_vpr_start_trans - end_cg_start_vpr);
+
+
+  auto ret =  transformSolutionToRoute(
       v_route, swaths, cov_graph, shortest_graph);
+
+  auto end_trans = high_resolution_clock::now();
+
+  auto duration_4 = duration_cast<milliseconds>(end_trans - end_vpr_start_trans);
+
+  timings_array_dest = "[ " + std::to_string(duration_1.count()) + ", " +
+    std::to_string(duration_2.count()) + ", " +
+    std::to_string(duration_3.count()) + ", " +
+    std::to_string(duration_4.count()) + " ]";
+  return ret;
 }
 
 void RoutePlannerBase::setStartAndEndPoint(const F2CPoint& p) {
@@ -57,16 +86,16 @@ void RoutePlannerBase::setStartAndEndPoint(const F2CPoint& p) {
 F2CGraph2D RoutePlannerBase::createShortestGraph(const F2CCells& cells,
     const F2CSwathsByCells& swaths_by_cells,
     double d_tol,
-    bool allow_crossings) const {
+    bool free_space_planner) const {
   F2CGraph2D g;
   // Add points from swaths that touches border
   for (auto&& swaths : swaths_by_cells) {
     for (auto&& s : swaths) {
       g.addEdge(s.startPoint(), cells.closestPointOnBorderTo(s.startPoint()));
       g.addEdge(s.endPoint(),cells.closestPointOnBorderTo(s.endPoint()));
-      // if crossings are not allowed, give the option to route through the swaths. At a penalty.
-      if (!allow_crossings) {
-        const int64_t swath_cost = g.getScalingFactor()*(s.length() + pessimistic_traversal_);
+      // if we don't expect a free space planner, then we can route through swaths
+      if (!free_space_planner) {
+        const int64_t swath_cost = g.getScalingFactor()*(pow(s.length(),2) + pessimistic_traversal_);
         g.addEdge(s.startPoint(), s.endPoint(),swath_cost);
       }
     }
@@ -134,13 +163,14 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
     bool use_visibility,
     double visibility_factor,
     bool visibility_use_crossing,
-    bool prefer_crossings) const {
+    bool prefer_crossings,
+    bool free_space_planner) const {
   if (prefer_crossings == true && use_visibility == false) {
     throw std::invalid_argument("You can only prefer crossings if you allow for visbility checks");
   }
 
   F2CGraph2D g;
-  int64_t INF = 1<<29;
+  // int64_t INF = 1<<29;
   for (auto&& swaths : swaths_by_cells) {
     for (auto&& s : swaths) {
       F2CPoint mid_p {(s.startPoint() + s.endPoint()) * 0.5};
@@ -189,15 +219,15 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
                     cost_function += pow(l2_d*shortest_graph.getScalingFactor(), dist_exponent);
                   }
                 }
-                // if there is no direct path between two nodes we check the visibility as last
-                // resort to allow a graceful failure
-                else if ( cost_function > INF ) {
+                // we always check for visibility when connecting swaths extremities
+                else if ( use_visibility && free_space_planner ) //cost_function > (pessimistic_traversal_ * shortest_graph.getScalingFactor()))
+                  {
                   // std::cout << "disconn rings detected" << a << b << std::endl;
 
-                  const int64_t collisions = (use_visibility) ? cells.countCollisions(a, b, visibility_use_crossing) : 0;
+                  const int64_t collisions = cells.countCollisions(a, b, visibility_use_crossing);
 
-                  cost_function +=  pessimistic_traversal_ * ( collisions * visibility_factor) *shortest_graph.getScalingFactor();
-                  cost_function += pow(l2_d*shortest_graph.getScalingFactor(), dist_exponent);
+                  cost_function +=pessimistic_traversal_ * ( collisions * visibility_factor) * shortest_graph.getScalingFactor();
+                  cost_function += pow(l2_d, dist_exponent)*shortest_graph.getScalingFactor();
                 }
 
                 g.addEdge(a, b, cost_function);

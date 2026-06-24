@@ -23,7 +23,6 @@ namespace ortools = operations_research;
 
 F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     const F2CSwathsByCells& swaths,
-    std::string& timings_array_dest,
     bool show_log,
     double d_tol,
     bool redirect_swaths,
@@ -36,47 +35,17 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     bool prefer_inter_rings_crossing,
     bool free_space_planner)
 {
-  for (auto cell : cells) {
-    // F2CGraph2D dummy;
-    pessimistic_traversal_ += cell.getExteriorRing().getMinSafeLength()*100;
-  }
-  std::cout<< "pessimistic: " << pessimistic_traversal_ << std::endl;
-
-  auto start_sg = high_resolution_clock::now();
   F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol, free_space_planner);
-  auto end_sg_start_cg = high_resolution_clock::now();
-
-  auto duration_1 = duration_cast<milliseconds>(end_sg_start_cg - start_sg);
-
 
   F2CGraph2D cov_graph = createCoverageGraph(cells, swaths, shortest_graph, d_tol, redirect_swaths,
       dist_exponent, use_visibility, visibility_factor, visibility_use_crossing,
       prefer_inter_rings_crossing, free_space_planner);
-  auto end_cg_start_vpr = high_resolution_clock::now();
-
-
-  auto duration_2 = duration_cast<milliseconds>(end_cg_start_vpr - end_sg_start_cg);
 
   std::vector<long long int> v_route = computeBestRoute(
       cov_graph, show_log, time_limit_seconds, search_for_optimum);
 
-  auto end_vpr_start_trans = high_resolution_clock::now();
-
-  auto duration_3 = duration_cast<milliseconds>(end_vpr_start_trans - end_cg_start_vpr);
-
-
-  auto ret =  transformSolutionToRoute(
+  return transformSolutionToRoute(
       v_route, swaths, cov_graph, shortest_graph);
-
-  auto end_trans = high_resolution_clock::now();
-
-  auto duration_4 = duration_cast<milliseconds>(end_trans - end_vpr_start_trans);
-
-  timings_array_dest = "[ " + std::to_string(duration_1.count()) + ", " +
-    std::to_string(duration_2.count()) + ", " +
-    std::to_string(duration_3.count()) + ", " +
-    std::to_string(duration_4.count()) + " ]";
-  return ret;
 }
 
 void RoutePlannerBase::setStartAndEndPoint(const F2CPoint& p) {

@@ -41,6 +41,7 @@ class RoutePlannerBase {
   /// @param visibility_use_crossing
   /// @param prefer_inter_rings_crossing
   /// @param free_space_planner
+  /// @param constrained
   /// @return Route that covers all the swaths
   virtual F2CRoute genRoute(const F2CCells& cells,
        const F2CSwathsByCells& swaths_by_cells,
@@ -54,7 +55,8 @@ class RoutePlannerBase {
        float visibility_factor = 2,
        bool visibility_use_crossing = false,
        bool prefer_inter_rings_crossing = false,
-       bool free_space_planner = true);
+       bool free_space_planner = true,
+       bool constrained = true);
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
@@ -94,7 +96,8 @@ class RoutePlannerBase {
       double visibility_factor = 2,
       bool visibility_use_crossing = false,
       bool prefer_crossings = false,
-      bool free_space_planner = false) const;
+      bool free_space_planner = false,
+      bool constrained = true) const;
 
 
   virtual ~RoutePlannerBase() = default;
@@ -108,8 +111,10 @@ class RoutePlannerBase {
   ///        but can find more optimal solutions. If false, uses automatic search which is faster
   ///        but may find less optimal solutions.
   virtual std::vector<long long int> computeBestRoute(
-      const F2CGraph2D& cov_graph, bool show_log, long int time_limit_seconds,
-      bool use_guided_local_search = true) const;
+      const F2CGraph2D& cov_graph, bool show_log,
+      long int time_limit_seconds,
+      bool use_guided_local_search = true,
+      bool constrained = true) const;
 
   /// Tranform index of points to an actual Route.
   virtual F2CRoute transformSolutionToRoute(

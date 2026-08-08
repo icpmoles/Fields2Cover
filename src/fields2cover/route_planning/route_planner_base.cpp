@@ -33,16 +33,17 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     float visibility_factor,
     bool visibility_use_crossing,
     bool prefer_inter_rings_crossing,
-    bool free_space_planner)
+    bool free_space_planner,
+    bool constrained)
 {
   F2CGraph2D shortest_graph = createShortestGraph(cells, swaths, d_tol, free_space_planner);
 
   F2CGraph2D cov_graph = createCoverageGraph(cells, swaths, shortest_graph, d_tol, redirect_swaths,
       dist_exponent, use_visibility, visibility_factor, visibility_use_crossing,
-      prefer_inter_rings_crossing, free_space_planner);
+      prefer_inter_rings_crossing, free_space_planner, constrained);
 
   std::vector<long long int> v_route = computeBestRoute(
-      cov_graph, show_log, time_limit_seconds, search_for_optimum);
+      cov_graph, show_log, time_limit_seconds, search_for_optimum, constrained);
 
   return transformSolutionToRoute(
       v_route, swaths, cov_graph, shortest_graph);
@@ -133,7 +134,8 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
     double visibility_factor,
     bool visibility_use_crossing,
     bool prefer_crossings,
-    bool free_space_planner) const {
+    bool free_space_planner,
+    bool constrained) const {
   if (prefer_crossings == true && use_visibility == false) {
     throw std::invalid_argument("You can only prefer crossings if you allow for visbility checks");
   }
@@ -233,25 +235,57 @@ F2CGraph2D RoutePlannerBase::createCoverageGraph(const F2CCells& cells,
 }
 
 std::vector<long long int> RoutePlannerBase::computeBestRoute(
-    const F2CGraph2D& cov_graph, bool show_log, long int time_limit_seconds,
-    bool use_guided_local_search) const {
-  int depot_id = static_cast<int>(cov_graph.numNodes()-1);
+    const F2CGraph2D& cov_graph,
+    bool show_log,
+    long int time_limit_seconds,
+    bool use_guided_local_search,
+    bool constrained) const {
+  const size_t n_nodes = cov_graph.numNodes();
+  int depot_id = static_cast<int>(n_nodes-1);
   const ortools::RoutingIndexManager::NodeIndex depot{depot_id};
-  ortools::RoutingIndexManager manager(cov_graph.numNodes(), 1, depot);
+  ortools::RoutingIndexManager manager(n_nodes, 1, depot);
   ortools::RoutingModel routing(manager);
-
   const int transit_callback_index = routing.RegisterTransitCallback(
-      [&cov_graph, &manager] (long long int from, long long int to) -> long long int {
-        auto from_node = manager.IndexToNode(from).value();
-        auto to_node = manager.IndexToNode(to).value();
-        return cov_graph.getCostFromEdge(from_node, to_node);
+      [&cov_graph, &manager /*, &constrained*/] (long long int from, long long int to) -> long long int {
+        const auto from_node = manager.IndexToNode(from).value();
+        const auto to_node = manager.IndexToNode(to).value();
+        const auto cost = cov_graph.getCostFromEdge(from_node, to_node);
+        // if (constrained && cost>1<<29) {
+        //     std::cout << from_node<< " to "<< to_node  << " = "  << cost << std::endl;
+        // }
+        return cost;
       });
+
+  // get access to the underlying solver
+  // operations_research::Solver* const solver = routing.solver();
+  if (constrained) {
+    long long int counter = 0;
+    std::cout << "Inserting ROUTE constraints" << std::endl;
+    for (int from_node = 0; from_node<n_nodes-1; ++from_node) {
+      for (int to_node = from_node; to_node<n_nodes-1; ++to_node) {
+        if (to_node == from_node) {continue;}
+        const auto cost = cov_graph.getCostFromEdge(from_node, to_node);
+        if (cost> 1<<29) {
+          counter++;
+            const auto from_idx = manager.NodeToIndex(operations_research::RoutingIndexManager::NodeIndex(from_node));
+            const auto to_idx = manager.NodeToIndex(operations_research::RoutingIndexManager::NodeIndex(to_node));
+
+            // solver->AddConstraint(solver->MakeNonEquality(routing.NextVar(from_idx), to_idx));
+            // solver->AddConstraint(solver->MakeNonEquality(routing.NextVar(to_idx), from_idx));
+            routing.NextVar(from_idx)->RemoveValue(to_idx);
+            routing.NextVar(to_idx)->RemoveValue(from_idx);
+        }
+      }
+    }
+    std::cout << "TOTAL: "<< counter << std::endl;
+  }
+
   routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index);
   ortools::RoutingSearchParameters searchParameters =
     ortools::DefaultRoutingSearchParameters();
-  searchParameters.set_use_full_propagation(false);
+  searchParameters.set_use_full_propagation(true);
   searchParameters.set_first_solution_strategy(
-    ortools::FirstSolutionStrategy::AUTOMATIC);
+    ortools::FirstSolutionStrategy::FIRST_UNBOUND_MIN_VALUE);
   if (use_guided_local_search) {
     searchParameters.set_local_search_metaheuristic(
       ortools::LocalSearchMetaheuristic::GUIDED_LOCAL_SEARCH);
@@ -263,16 +297,27 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(
   searchParameters.set_log_search(show_log);
   const ortools::Assignment* solution =
     routing.SolveWithParameters(searchParameters);
+  std::cout  << "Routing excuted" <<std::endl;
+
+  if (!solution) {
+    std::cout  << "Routing Failed" <<std::endl;
+    return {};
+  }
 
   long long int index = routing.Start(0);
+
   std::vector<long long int> v_id;
+  std::cout  << "gettin index "<< index << " nextvar " << routing.NextVar(index) <<std::endl;
 
   index = solution->Value(routing.NextVar(index));
 
+  std::cout  << "getting value, new index = " << index <<std::endl;
   while (!routing.IsEnd(index)) {
     v_id.emplace_back(manager.IndexToNode(index).value());
     index = solution->Value(routing.NextVar(index));
   }
+  std::cout  << "solution exported" <<std::endl;
+
   return v_id;
 }
 
@@ -281,6 +326,8 @@ F2CRoute RoutePlannerBase::transformSolutionToRoute(
     const F2CSwathsByCells& swaths_by_cells,
     const F2CGraph2D& coverage_graph,
     F2CGraph2D& shortest_graph) const {
+  std::cout  << "transforming to route" <<std::endl;
+
   F2CRoute route;
   const size_t NS = swaths_by_cells.sizeTotal();
   for (int i = 0; i < route_ids.size()-2; ++i) {
@@ -310,6 +357,8 @@ F2CRoute RoutePlannerBase::transformSolutionToRoute(
     route.addConnection(shortest_graph.shortestPath(
           route.endPoint(), *r_start_end));
   }
+  std::cout  << "FINISHED transforming to route" <<std::endl;
+
   return route;
 }
 

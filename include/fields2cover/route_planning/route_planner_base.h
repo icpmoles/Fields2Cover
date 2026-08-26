@@ -17,8 +17,60 @@
 #include "fields2cover/objectives/rp_obj/rp_objective.h"
 #include "fields2cover/objectives/rp_obj/direct_dist_path_obj.h"
 #include "fields2cover/route_planning/single_cell_swaths_order_base.h"
+#include <ortools/constraint_solver/routing_enums.pb.h>
+
 
 namespace f2c::rp {
+
+// taken from https://github.com/google/or-tools/blob/v9.9/ortools/constraint_solver/routing_enums.proto#L25-L110
+inline std::vector<std::string> FirstSolutionStrategy = {
+  "UNSET",
+  "GLOBAL_CHEAPEST_ARC",
+  "LOCAL_CHEAPEST_ARC",
+  "PATH_CHEAPEST_ARC",
+  "PATH_MOST_CONSTRAINED_ARC",
+  "EVALUATOR_STRATEGY", // 5
+  "ALL_UNPERFORMED",
+  "BEST_INSERTION",
+  "PARALLEL_CHEAPEST_INSERTION",
+  "LOCAL_CHEAPEST_INSERTION",
+  "SAVINGS", // 10
+  "SWEEP",
+  "FIRST_UNBOUND_MIN_VALUE",
+  "CHRISTOFIDES",
+  "SEQUENTIAL_CHEAPEST_INSERTION",
+  "AUTOMATIC", // 15
+  "LOCAL_CHEAPEST_COST_INSERTION",
+};
+
+// Shared read-only problem data across threads
+struct CVrpData {
+  F2CGraph2D Cov_Graph;
+  std::vector<std::vector<bool>> constraints;
+  long int time_limit_seconds;
+  bool constrained = false;
+  bool use_guided_local_search = true;
+  bool show_log = true;
+
+};
+
+// Search configuration for a single thread worker
+struct SearchConfig {
+  operations_research::FirstSolutionStrategy::Value strategy;
+  // int32_t random_seed;
+};
+
+// Result structure returned from worker threads
+struct ThreadResult {
+  int64_t cost = -1;
+  bool success = false;
+  operations_research::FirstSolutionStrategy::Value strategy;
+  // int32_t random_seed;
+  std::vector<long long int> route;
+  F2CRoute p_route;
+  int64_t path_length = -1;
+  int collisions = -1;
+};
 
 class RoutePlannerBase {
  public:
@@ -42,9 +94,12 @@ class RoutePlannerBase {
   /// @param prefer_inter_rings_crossing
   /// @param free_space_planner
   /// @param constrained
+  /// @param parallel
   /// @return Route that covers all the swaths
   virtual F2CRoute genRoute(const F2CCells& cells,
        const F2CSwathsByCells& swaths_by_cells,
+       std::vector<ThreadResult> &output,
+      ThreadResult &best,
        bool show_log = false,
        double d_tol = 1e-4,
        bool redirect_swaths = true,
@@ -56,7 +111,8 @@ class RoutePlannerBase {
        bool visibility_use_crossing = false,
        bool prefer_inter_rings_crossing = false,
        bool free_space_planner = true,
-       bool constrained = true);
+       bool constrained = false,
+       bool parallel = false);
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
@@ -123,11 +179,43 @@ class RoutePlannerBase {
       const F2CGraph2D& coverage_graph,
       F2CGraph2D& shortest_graph) const;
 
+  virtual std::vector<long long int> computeBestRouteParallel(F2CGraph2D& cov_graph,
+      bool show_log,
+      long int time_limit_seconds,
+      std::vector<ThreadResult> &output,
+      ThreadResult &best,
+      bool use_guided_local_search = true,
+      bool constrained = true,
+      uint cores = 4) const;
+
+  ThreadResult RunSingleInitialization(CVrpData& data, SearchConfig config) const;
+
  protected:
   std::optional<F2CPoint> r_start_end;
 
  private:
   double pessimistic_traversal_ = 0.0;
+
+  //
+  std::vector<operations_research::FirstSolutionStrategy::Value> possibleStrategies = {
+    // operations_research::FirstSolutionStrategy::UNSET,
+    operations_research::FirstSolutionStrategy::GLOBAL_CHEAPEST_ARC,
+    operations_research::FirstSolutionStrategy::LOCAL_CHEAPEST_ARC,
+    operations_research::FirstSolutionStrategy::PATH_CHEAPEST_ARC,
+    operations_research::FirstSolutionStrategy::PATH_MOST_CONSTRAINED_ARC,
+    operations_research::FirstSolutionStrategy::EVALUATOR_STRATEGY, // 5
+    operations_research::FirstSolutionStrategy::ALL_UNPERFORMED,
+    operations_research::FirstSolutionStrategy::BEST_INSERTION,
+    operations_research::FirstSolutionStrategy::PARALLEL_CHEAPEST_INSERTION,
+    operations_research::FirstSolutionStrategy::LOCAL_CHEAPEST_INSERTION,
+    operations_research::FirstSolutionStrategy::SAVINGS, // 10
+    operations_research::FirstSolutionStrategy::SWEEP,
+    operations_research::FirstSolutionStrategy::FIRST_UNBOUND_MIN_VALUE,
+    operations_research::FirstSolutionStrategy::CHRISTOFIDES,
+    operations_research::FirstSolutionStrategy::SEQUENTIAL_CHEAPEST_INSERTION,
+    operations_research::FirstSolutionStrategy::AUTOMATIC, // 15
+    operations_research::FirstSolutionStrategy::LOCAL_CHEAPEST_COST_INSERTION,
+  };
 };
 
 

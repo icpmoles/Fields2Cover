@@ -289,8 +289,8 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(
   if (constrained) {
     long long int counter = 0;
     std::cout << "Inserting ROUTE constraints" << std::endl;
-    for (int from_node = 0; from_node<n_nodes-1; ++from_node) {
-      for (int to_node = from_node; to_node<n_nodes-1; ++to_node) {
+    for (size_t from_node = 0; from_node<n_nodes-1; ++from_node) {
+      for (size_t to_node = from_node; to_node<n_nodes-1; ++to_node) {
         if (to_node == from_node) {continue;}
         const auto cost = cov_graph.getCostFromEdge(from_node, to_node);
         if (cost > 1<<29) {

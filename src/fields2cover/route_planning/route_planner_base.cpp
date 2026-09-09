@@ -300,6 +300,8 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(
 
             // solver->AddConstraint(solver->MakeNonEquality(routing.NextVar(from_idx), to_idx));
             // solver->AddConstraint(solver->MakeNonEquality(routing.NextVar(to_idx), from_idx));
+          // MORE IDOMATIC WAY to FORBID connections
+          // https://github.com/google/or-tools/blob/v9.9/examples/cpp/random_tsp.cc#L143
             routing.NextVar(from_idx)->RemoveValue(to_idx);
             routing.NextVar(to_idx)->RemoveValue(from_idx);
         }

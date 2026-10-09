@@ -95,6 +95,9 @@ class RoutePlannerBase {
   /// @param free_space_planner
   /// @param constrained
   /// @param parallel
+  /// @param constrained_circuit If true, solve the coverage graph with the
+  ///        CP-SAT solver as a single Hamiltonian circuit (AddCircuit)
+  ///        instead of the routing solver. `parallel` is then ignored.
   /// @return Route that covers all the swaths
   virtual F2CRoute genRoute(const F2CCells& cells,
        const F2CSwathsByCells& swaths_by_cells,
@@ -112,7 +115,8 @@ class RoutePlannerBase {
        bool prefer_inter_rings_crossing = false,
        bool free_space_planner = true,
        bool constrained = false,
-       bool parallel = false);
+       bool parallel = false,
+       bool constrained_circuit = false);
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
@@ -187,6 +191,20 @@ class RoutePlannerBase {
       bool use_guided_local_search = true,
       bool constrained = true,
       uint cores = 4) const;
+
+  /// Use the CP-SAT solver to find the best coverage route as a single
+  ///   circuit over all the nodes of the coverage graph.
+  /// @param cov_graph Graph representing the coverage problem
+  /// @param show_log Whether to show optimization logs
+  /// @param time_limit_seconds Maximum time to spend on optimization
+  /// @param constrained If true, arcs with cost > 2^29 are not added to the
+  ///        model, so the solver cannot use them.
+  /// @return Result with the index of the points of the route (depot
+  ///         excluded), the cost and whether a solution was found.
+  virtual ThreadResult computeBestRouteCircuit(
+      const F2CGraph2D& cov_graph, bool show_log,
+      long int time_limit_seconds,
+      bool constrained = true) const;
 
   ThreadResult RunSingleInitialization(CVrpData& data, SearchConfig config) const;
 

@@ -191,10 +191,14 @@ Route Route::clone() const {
   return new_r;
 }
 
-Path Route::asPath(Robot& robot) {
+Path Route::asPath(Robot& robot, bool use_filter, double filter_distance, double filter_alpha) {
+  if (filter_alpha>1.0 || filter_alpha<0.0) {
+    throw std::out_of_range("Filter_alpha needs to be between 0 and 1");
+  }
+
   Path path;
   const double vel = robot.getCruiseVel();
-  if (connections_.size() > 0) {
+  if (!connections_.empty()) {
     path += Path(this->getConnection(0), vel);
   }
   for (size_t i = 0; i < v_swaths_.size(); ++i) {
@@ -202,7 +206,18 @@ Path Route::asPath(Robot& robot) {
       path.appendSwath(swath,vel);
     }
     if ((connections_.size() > i + 1)) {
-      path +=   Path(this->getConnection(i+1), vel);
+      if (!this->getConnection(i+1).isEmpty()) {
+        if (use_filter) {
+          path += Path(this->getConnection(i+1).smoothify(filter_distance, filter_alpha), vel);
+        } else {
+          path += Path(this->getConnection(i+1), vel);
+        }
+      } else {
+        const MultiPoint sw2sw{v_swaths_.at(i).back().endPoint(),
+          v_swaths_.at(i+1).at(0).startPoint()};
+        path +=   Path(sw2sw, vel);
+      }
+
     }
   }
   return path;

@@ -12,6 +12,7 @@
 #include <ortools/sat/cp_model_solver.h>
 #include <ortools/sat/sat_parameters.pb.h>
 #include <cmath>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -62,9 +63,10 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
   std::vector<long long int> v_route;
   if (constrained_circuit) {
     ThreadResult result = computeBestRouteCircuit(cov_graph, show_log, time_limit_seconds, true);
-    if (result.success) {
-      result.p_route = transformSolutionToRoute(result.route, swaths, cov_graph, shortest_graph);
+    if (!result.success) {
+      throw std::runtime_error("Circuit route planner found no solution (problem infeasible or time limit too short)");
     }
+    result.p_route = transformSolutionToRoute(result.route, swaths, cov_graph, shortest_graph);
     result_output = {result};
     best = result;
     return result.p_route;
@@ -83,6 +85,9 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
         computeBestRoute(cov_graph, show_log, time_limit_seconds, search_for_optimum, constrained);
   }
 
+  if (v_route.empty()) {
+    throw std::runtime_error("Route planner found no solution (problem infeasible or time limit too short)");
+  }
   return transformSolutionToRoute(v_route, swaths, cov_graph, shortest_graph);
 }
 
@@ -434,7 +439,7 @@ F2CRoute RoutePlannerBase::transformSolutionToRoute(const std::vector<long long 
 
   F2CRoute route;
   const size_t NS = swaths_by_cells.sizeTotal();
-  for (int i = 0; i < route_ids.size() - 2; ++i) {
+  for (size_t i = 0; i + 2 < route_ids.size(); ++i) {
     F2CPoint p_s = coverage_graph.indexToNode(route_ids[i]);
     F2CPoint p_e = coverage_graph.indexToNode(route_ids[i + 2]);
     for (int j = 0; j < NS; ++j) {

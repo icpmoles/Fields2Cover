@@ -604,7 +604,7 @@ std::vector<long long int> RoutePlannerBase::computeBestRouteParallel(F2CGraph2D
       best_result = result;
     }
   }
-  best.strategy = best_result.strategy;
+  best = best_result;
 
   std::cout << "best strategy: " << FirstSolutionStrategy.at(best_result.strategy) << std::endl;
   return best_result.route;

@@ -593,8 +593,10 @@ std::vector<long long int> RoutePlannerBase::computeBestRouteParallel(F2CGraph2D
   // Find global best solution
   // ------------------------------------------------------------
 
-  ThreadResult best_result{std::numeric_limits<int64_t>::max(), false,
-      ortools::FirstSolutionStrategy::UNSET, {}, {}, -1, 0};
+  ThreadResult best_result;
+  best_result.cost = std::numeric_limits<int64_t>::max();
+  best_result.strategy = ortools::FirstSolutionStrategy::UNSET;
+  best_result.collisions = 0;
 
   // save results
   output = results;
@@ -694,7 +696,10 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
 
   ortools::RoutingIndexManager manager(n_nodes, 1, depot);
 
-  ortools::RoutingModel routing(manager);
+  // Local search profiling is needed for the local search statistics
+  ortools::RoutingModelParameters model_parameters = ortools::DefaultRoutingModelParameters();
+  model_parameters.mutable_solver_parameters()->set_profile_local_search(true);
+  ortools::RoutingModel routing(manager, model_parameters);
 
   const int transit_callback_index = routing.RegisterTransitCallback(
       [&data, &manager /*, &constrained*/](long long int from, long long int to) -> long long int {
@@ -752,8 +757,11 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
   const ortools::Assignment* solution = routing.SolveWithParameters(searchParameters);
   // std::cout  << "Routing excuted" <<std::endl;
 
+  ThreadResult result;
+  result.cs_stats = routing.solver()->GetConstraintSolverStatistics();
+  result.ls_stats = routing.solver()->GetLocalSearchStatistics();
+
   if (solution != nullptr) {
-    ThreadResult result;
     result.success = true;
     result.cost = solution->ObjectiveValue();
     result.strategy = config.strategy;
@@ -779,8 +787,10 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
               << std::endl;
   }
 
-  return {std::numeric_limits<int64_t>::max(), false, config.strategy, {}, {}};
-  ;
+  result.cost = std::numeric_limits<int64_t>::max();
+  result.success = false;
+  result.strategy = config.strategy;
+  return result;
 }
 
 } // namespace f2c::rp

@@ -18,6 +18,7 @@
 #include "fields2cover/objectives/rp_obj/direct_dist_path_obj.h"
 #include "fields2cover/route_planning/single_cell_swaths_order_base.h"
 #include <ortools/constraint_solver/routing_enums.pb.h>
+#include <ortools/constraint_solver/search_stats.pb.h>
 
 
 namespace f2c::rp {
@@ -70,6 +71,10 @@ struct ThreadResult {
   F2CRoute p_route;
   int64_t path_length = -1;
   int collisions = -1;
+  // Search statistics of the routing solver (branches, failures, ...)
+  operations_research::ConstraintSolverStatistics cs_stats;
+  // Local search statistics (operators, filters, first solution)
+  operations_research::LocalSearchStatistics ls_stats;
 };
 
 class RoutePlannerBase {

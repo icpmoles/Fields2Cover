@@ -360,6 +360,19 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(const F2CGraph2D& 
   return v_id;
 }
 
+void RoutePlannerBase::setStrategies(
+    const std::vector<ortools::FirstSolutionStrategy::Value>& strategies) {
+  if (strategies.empty()) {
+    throw std::invalid_argument("at least one first solution strategy is needed");
+  }
+  this->possibleStrategies = strategies;
+}
+
+const std::vector<ortools::FirstSolutionStrategy::Value>&
+RoutePlannerBase::getStrategies() const {
+  return this->possibleStrategies;
+}
+
 ThreadResult RoutePlannerBase::computeBestRouteCircuit(const F2CGraph2D& cov_graph,
     bool show_log,
     long int time_limit_seconds,
@@ -408,6 +421,8 @@ ThreadResult RoutePlannerBase::computeBestRouteCircuit(const F2CGraph2D& cov_gra
   ThreadResult result;
   result.cost = std::numeric_limits<int64_t>::max();
   result.strategy = ortools::FirstSolutionStrategy::UNSET;
+  result.solver_status = sat::CpSolverStatus_Name(response.status());
+  result.best_bound = response.best_objective_bound();
   if (response.status() != sat::CpSolverStatus::OPTIMAL &&
       response.status() != sat::CpSolverStatus::FEASIBLE) {
     std::cout << "CIRCUIT NOT Solved successfully: " << sat::CpSolverStatus_Name(response.status())

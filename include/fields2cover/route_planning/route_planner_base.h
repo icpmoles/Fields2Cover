@@ -71,6 +71,9 @@ struct ThreadResult {
   F2CRoute p_route;
   int64_t path_length = -1;
   int collisions = -1;
+  // CP-SAT only (computeBestRouteCircuit): status name and best objective bound
+  std::string solver_status;
+  double best_bound = -1;
   // Search statistics of the routing solver (branches, failures, ...)
   operations_research::ConstraintSolverStatistics cs_stats;
   // Local search statistics (operators, filters, first solution)
@@ -125,6 +128,12 @@ class RoutePlannerBase {
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
+
+  /// Set the first solution strategies tried by computeBestRouteParallel,
+  ///   one search per strategy (default: all of them).
+  void setStrategies(
+      const std::vector<operations_research::FirstSolutionStrategy::Value>& strategies);
+  const std::vector<operations_research::FirstSolutionStrategy::Value>& getStrategies() const;
 
   /// Create graph to compute the shortest path between two points
   ///   in the headlands.

@@ -8,6 +8,7 @@
 #include <ortools/constraint_solver/routing_enums.pb.h>
 #include <ortools/constraint_solver/routing_index_manager.h>
 #include <ortools/constraint_solver/routing_parameters.h>
+#include <ortools/constraint_solver/constraint_solveri.h>
 #include <ortools/sat/cp_model.h>
 #include <ortools/sat/cp_model_solver.h>
 #include <ortools/sat/sat_parameters.pb.h>
@@ -26,12 +27,114 @@
 #include <csignal>
 #include <mutex>
 #include <queue>
+#include <fstream>
+#include <iomanip>
+#include <memory>
 
 using namespace std::chrono;
 
 namespace f2c::rp {
 
 namespace ortools = operations_research;
+
+namespace {
+// Append one line per solution found by the solver to `out`:
+// iteration, elapsed ms, cost and the visited nodes (depot excluded, same
+// format as the route returned by computeBestRoute)
+void addSearchTraceCallback(ortools::RoutingModel& routing,
+    const ortools::RoutingIndexManager& manager,
+    std::ofstream& out) {
+  const auto start = steady_clock::now();
+  routing.AddAtSolutionCallback([&routing, &manager, &out, start, iter = 0LL]() mutable {
+    const auto elapsed = duration_cast<milliseconds>(steady_clock::now() - start).count();
+    out << iter++ << " " << elapsed << " " << routing.CostVar()->Value();
+    long long int index = routing.NextVar(routing.Start(0))->Value();
+    while (!routing.IsEnd(index)) {
+      out << " " << manager.IndexToNode(index).value();
+      index = routing.NextVar(index)->Value();
+    }
+    out << "\n";
+  });
+}
+
+// Filter that never rejects a move: it records one every `every_n` neighbors
+// tested by the local search (the current solution with the delta applied),
+// with the same format as addSearchTraceCallback. Being incremental, the
+// filter manager calls it for every candidate, even the ones rejected by
+// the previous filters.
+class NeighborTraceFilter : public ortools::IntVarLocalSearchFilter {
+ public:
+  NeighborTraceFilter(const ortools::RoutingModel& routing,
+      const ortools::RoutingIndexManager& manager,
+      const F2CGraph2D& cov_graph,
+      int64_t every_n,
+      std::ofstream& out)
+      : IntVarLocalSearchFilter(routing.Nexts()),
+        routing_(routing),
+        manager_(manager),
+        cov_graph_(cov_graph),
+        every_n_(every_n),
+        out_(out),
+        start_(steady_clock::now()),
+        next_(routing.Nexts().size()) {}
+
+  bool Accept(const ortools::Assignment* delta, const ortools::Assignment*,
+      int64_t, int64_t) override {
+    if (counter_++ % every_n_ != 0) {
+      return true;
+    }
+    for (int i = 0; i < Size(); ++i) {
+      next_[i] = IsVarSynced(i) ? Value(i) : -1;
+    }
+    const ortools::Assignment::IntContainer& changes = delta->IntVarContainer();
+    for (int i = 0; i < changes.Size(); ++i) {
+      const ortools::IntVarElement& e = changes.Element(i);
+      int64_t index;
+      if (e.Activated() && e.Bound() && FindIndex(e.Var(), &index)) {
+        next_[index] = e.Value();
+      }
+    }
+    // Walk the route from the depot. During the first solution heuristics
+    // the route can be partial: stop at the first unassigned next
+    std::vector<long long int> v_id;
+    int64_t cost = 0;
+    int64_t index = routing_.Start(0);
+    while (!routing_.IsEnd(index) && next_[index] >= 0 &&
+           v_id.size() <= next_.size()) {
+      const int64_t to = next_[index];
+      cost += cov_graph_.getCostFromEdge(manager_.IndexToNode(index).value(),
+          manager_.IndexToNode(to).value());
+      index = to;
+      if (!routing_.IsEnd(index)) {
+        v_id.emplace_back(manager_.IndexToNode(index).value());
+      }
+    }
+    const auto elapsed = duration_cast<milliseconds>(steady_clock::now() - start_).count();
+    out_ << counter_ - 1 << " " << elapsed << " " << cost;
+    for (auto&& id : v_id) {
+      out_ << " " << id;
+    }
+    out_ << "\n";
+    return true;
+  }
+  bool IsIncremental() const override { return true; }
+  std::string DebugString() const override { return "NeighborTraceFilter"; }
+
+ private:
+  const ortools::RoutingModel& routing_;
+  const ortools::RoutingIndexManager& manager_;
+  const F2CGraph2D& cov_graph_;
+  const int64_t every_n_;
+  std::ofstream& out_;
+  const steady_clock::time_point start_;
+  int64_t counter_ = 0;
+  std::vector<int64_t> next_;
+};
+
+void writePoint(std::ostream& out, const F2CPoint& p) {
+  out << "[" << p.getX() << "," << p.getY() << "]";
+}
+}  // namespace
 
 F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     const F2CSwathsByCells& swaths,
@@ -57,6 +160,10 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
   F2CGraph2D cov_graph = createCoverageGraph(cells, swaths, shortest_graph, d_tol, redirect_swaths,
       dist_exponent, use_visibility, visibility_factor, visibility_use_crossing,
       prefer_inter_rings_crossing, free_space_planner, constrained);
+
+  if (!search_trace_prefix_.empty()) {
+    saveNodeMap(search_trace_prefix_ + "_nodes.json", cells, swaths, cov_graph);
+  }
 
   // std::vector<ThreadResult> result_output;
 
@@ -93,6 +200,58 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
 
 void RoutePlannerBase::setStartAndEndPoint(const F2CPoint& p) {
   this->r_start_end = p;
+}
+
+void RoutePlannerBase::setSearchTracePrefix(const std::string& prefix) {
+  this->search_trace_prefix_ = prefix;
+}
+
+const std::string& RoutePlannerBase::getSearchTracePrefix() const {
+  return this->search_trace_prefix_;
+}
+
+void RoutePlannerBase::setNeighborTraceSampling(int64_t every_n) {
+  this->neighbor_trace_sampling_ = every_n;
+}
+
+int64_t RoutePlannerBase::getNeighborTraceSampling() const {
+  return this->neighbor_trace_sampling_;
+}
+
+void RoutePlannerBase::saveNodeMap(const std::string& file,
+    const F2CCells& cells,
+    const F2CSwathsByCells& swaths_by_cells,
+    const F2CGraph2D& cov_graph) const {
+  std::ofstream out(file);
+  out << std::setprecision(10);
+  out << "{\n\"nodes\": [";
+  for (size_t i = 0; i < cov_graph.numNodes(); ++i) {
+    out << (i ? "," : "");
+    writePoint(out, cov_graph.indexToNode(i));
+  }
+  // the depot is the last node (see computeBestRoute)
+  out << "],\n\"depot\": " << cov_graph.numNodes() - 1 << ",\n\"swaths\": [";
+  for (size_t j = 0; j < swaths_by_cells.sizeTotal(); ++j) {
+    const F2CSwath& s = swaths_by_cells.getSwath(j);
+    const F2CPoint mid_p{(s.startPoint() + s.endPoint()) * 0.5};
+    out << (j ? ",\n" : "\n") << "{\"start\": " << cov_graph.nodeToIndex(s.startPoint())
+        << ", \"mid\": " << cov_graph.nodeToIndex(mid_p)
+        << ", \"end\": " << cov_graph.nodeToIndex(s.endPoint()) << "}";
+  }
+  out << "],\n\"rings\": [";
+  bool first_ring = true;
+  for (auto&& cell : cells) {
+    for (auto&& ring : cell) {
+      out << (first_ring ? "\n[" : ",\n[");
+      first_ring = false;
+      for (size_t i = 0; i < ring.size(); ++i) {
+        out << (i ? "," : "");
+        writePoint(out, ring.getGeometry(i));
+      }
+      out << "]";
+    }
+  }
+  out << "]\n}\n";
 }
 
 F2CGraph2D RoutePlannerBase::createShortestGraph(const F2CCells& cells,
@@ -289,6 +448,9 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(const F2CGraph2D& 
   int depot_id = static_cast<int>(n_nodes - 1);
   const ortools::RoutingIndexManager::NodeIndex depot{depot_id};
   ortools::RoutingIndexManager manager(n_nodes, 1, depot);
+  // declared before the model, that does not take ownership of the filter
+  std::ofstream neighbors;
+  std::unique_ptr<NeighborTraceFilter> neighbor_filter;
   ortools::RoutingModel routing(manager);
   const int transit_callback_index =
       routing.RegisterTransitCallback([&cov_graph, &manager /*, &constrained*/](long long int from,
@@ -342,6 +504,17 @@ std::vector<long long int> RoutePlannerBase::computeBestRoute(const F2CGraph2D& 
   }
   searchParameters.mutable_time_limit()->set_seconds(time_limit_seconds);
   searchParameters.set_log_search(show_log);
+  std::ofstream trace;
+  if (!search_trace_prefix_.empty()) {
+    trace.open(search_trace_prefix_ + "_trace.txt");
+    addSearchTraceCallback(routing, manager, trace);
+    if (neighbor_trace_sampling_ > 0) {
+      neighbors.open(search_trace_prefix_ + "_neighbors.txt");
+      neighbor_filter = std::make_unique<NeighborTraceFilter>(
+          routing, manager, cov_graph, neighbor_trace_sampling_, neighbors);
+      routing.AddLocalSearchFilter(neighbor_filter.get());
+    }
+  }
   const ortools::Assignment* solution = routing.SolveWithParameters(searchParameters);
 
   if (!solution) {
@@ -714,6 +887,9 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
   // Local search profiling is needed for the local search statistics
   ortools::RoutingModelParameters model_parameters = ortools::DefaultRoutingModelParameters();
   model_parameters.mutable_solver_parameters()->set_profile_local_search(true);
+  // declared before the model, that does not take ownership of the filter
+  std::ofstream neighbors;
+  std::unique_ptr<NeighborTraceFilter> neighbor_filter;
   ortools::RoutingModel routing(manager, model_parameters);
 
   const int transit_callback_index = routing.RegisterTransitCallback(
@@ -769,6 +945,19 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
   }
   searchParameters.mutable_time_limit()->set_seconds(data.time_limit_seconds);
   searchParameters.set_log_search(data.show_log);
+  std::ofstream trace;
+  if (!search_trace_prefix_.empty()) {
+    trace.open(search_trace_prefix_ + "_" + FirstSolutionStrategy.at(config.strategy) +
+               "_trace.txt");
+    addSearchTraceCallback(routing, manager, trace);
+    if (neighbor_trace_sampling_ > 0) {
+      neighbors.open(search_trace_prefix_ + "_" + FirstSolutionStrategy.at(config.strategy) +
+                     "_neighbors.txt");
+      neighbor_filter = std::make_unique<NeighborTraceFilter>(
+          routing, manager, data.Cov_Graph, neighbor_trace_sampling_, neighbors);
+      routing.AddLocalSearchFilter(neighbor_filter.get());
+    }
+  }
   const ortools::Assignment* solution = routing.SolveWithParameters(searchParameters);
   // std::cout  << "Routing excuted" <<std::endl;
 

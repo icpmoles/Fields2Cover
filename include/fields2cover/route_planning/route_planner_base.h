@@ -13,6 +13,7 @@
 #include <optional>
 #include <limits>
 #include <utility>
+#include <string>
 #include "fields2cover/types.h"
 #include "fields2cover/objectives/rp_obj/rp_objective.h"
 #include "fields2cover/objectives/rp_obj/direct_dist_path_obj.h"
@@ -135,6 +136,29 @@ class RoutePlannerBase {
       const std::vector<operations_research::FirstSolutionStrategy::Value>& strategies);
   const std::vector<operations_research::FirstSolutionStrategy::Value>& getStrategies() const;
 
+  /// Record the search of the routing solver, to animate it.
+  ///   genRoute saves the coverage graph nodes and the swath each node
+  ///   belongs to in `<prefix>_nodes.json`, and every solution found
+  ///   (iteration, elapsed ms, cost, node sequence) is appended to
+  ///   `<prefix>_trace.txt` (`<prefix>_<STRATEGY>_trace.txt` in parallel).
+  ///   An empty prefix (default) disables the recording.
+  void setSearchTracePrefix(const std::string& prefix);
+  const std::string& getSearchTracePrefix() const;
+
+  /// Also record one every `every_n` neighbors tested by the local search,
+  ///   accepted or not, in `<prefix>_neighbors.txt`
+  ///   (`<prefix>_<STRATEGY>_neighbors.txt` in parallel), with the same
+  ///   format as the trace. 0 (default) disables it.
+  void setNeighborTraceSampling(int64_t every_n);
+  int64_t getNeighborTraceSampling() const;
+
+  /// Save the coverage graph nodes, the swaths they belong to and the
+  ///   headland rings as JSON.
+  void saveNodeMap(const std::string& file,
+      const F2CCells& cells,
+      const F2CSwathsByCells& swaths_by_cells,
+      const F2CGraph2D& cov_graph) const;
+
   /// Create graph to compute the shortest path between two points
   ///   in the headlands.
   ///
@@ -227,6 +251,8 @@ class RoutePlannerBase {
 
  private:
   double pessimistic_traversal_ = 0.0;
+  std::string search_trace_prefix_;
+  int64_t neighbor_trace_sampling_ = 0;
 
   //
   std::vector<operations_research::FirstSolutionStrategy::Value> possibleStrategies = {

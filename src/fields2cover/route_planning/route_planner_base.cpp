@@ -179,6 +179,10 @@ F2CRoute RoutePlannerBase::genRoute(const F2CCells& cells,
     return result.p_route;
   }
   if (parallel) {
+    if (std::find(possibleStrategies.begin(), possibleStrategies.end(), kSwathSnakeStrategy) !=
+        possibleStrategies.end()) {
+      initial_route_ = genSwathSnakeRoute(swaths, cov_graph);
+    }
     v_route = computeBestRouteParallel(cov_graph, show_log, time_limit_seconds, result_output, best,
         search_for_optimum, constrained, 1);
 
@@ -546,6 +550,120 @@ RoutePlannerBase::getStrategies() const {
   return this->possibleStrategies;
 }
 
+void RoutePlannerBase::setInitialRoute(const std::vector<long long int>& route) {
+  this->initial_route_ = route;
+}
+
+const std::vector<long long int>& RoutePlannerBase::getInitialRoute() const {
+  return this->initial_route_;
+}
+
+std::vector<long long int> RoutePlannerBase::genSwathSnakeRoute(
+    const F2CSwathsByCells& swaths_by_cells, const F2CGraph2D& cov_graph) const {
+  const size_t n_swaths = swaths_by_cells.sizeTotal();
+  if (n_swaths == 0) {
+    return {};
+  }
+
+  // All the swaths are parallel: take the direction of the longest one,
+  // pointing to +x (or +y if vertical), so the result does not depend on how
+  // each swath is oriented
+  size_t longest = 0;
+  for (size_t j = 1; j < n_swaths; ++j) {
+    if (swaths_by_cells.getSwath(j).length() > swaths_by_cells.getSwath(longest).length()) {
+      longest = j;
+    }
+  }
+  const F2CSwath& ref = swaths_by_cells.getSwath(longest);
+  double dx = ref.endPoint().getX() - ref.startPoint().getX();
+  double dy = ref.endPoint().getY() - ref.startPoint().getY();
+  const double norm = std::hypot(dx, dy);
+  if (norm <= 0.0) {
+    throw std::runtime_error("SWATH_SNAKE: the swaths have no length");
+  }
+  dx /= norm;
+  dy /= norm;
+  if (dx < -1e-9 || (std::abs(dx) <= 1e-9 && dy < 0.0)) {
+    dx = -dx;
+    dy = -dy;
+  }
+  // along: position on the swath line; across: which parallel line
+  auto along = [&](const F2CPoint& p) { return p.getX() * dx + p.getY() * dy; };
+  auto across = [&](const F2CPoint& p) { return -p.getX() * dy + p.getY() * dx; };
+
+  // Only plain values: sorting F2CPoints by swapping them is not safe
+  struct Segment {
+    double across;
+    double along;      // lowest along coordinate of the two ends
+    long long int low;   // node of the end with the lowest along coordinate
+    long long int high;  // node of the other end
+    long long int mid;   // node in the middle of the swath
+  };
+  std::vector<Segment> segments;
+  segments.reserve(n_swaths);
+  double min_width = std::numeric_limits<double>::max();
+  for (size_t j = 0; j < n_swaths; ++j) {
+    const F2CSwath& s = swaths_by_cells.getSwath(j);
+    const F2CPoint mid_p{(s.startPoint() + s.endPoint()) * 0.5};  // as in createCoverageGraph
+    const bool start_is_low = along(s.startPoint()) <= along(s.endPoint());
+    const auto start_id = static_cast<long long int>(cov_graph.nodeToIndex(s.startPoint()));
+    const auto end_id = static_cast<long long int>(cov_graph.nodeToIndex(s.endPoint()));
+    Segment seg{across(mid_p), std::min(along(s.startPoint()), along(s.endPoint())),
+        start_is_low ? start_id : end_id, start_is_low ? end_id : start_id,
+        static_cast<long long int>(cov_graph.nodeToIndex(mid_p))};
+    segments.push_back(seg);
+    if (s.getWidth() > 0.0) {
+      min_width = std::min(min_width, s.getWidth());
+    }
+  }
+  // Segments cut from the same line have the same across coordinate,
+  // parallel lines are one swath width apart
+  const double tol = min_width < std::numeric_limits<double>::max() ? 0.25 * min_width : 1e-6;
+
+  std::sort(segments.begin(), segments.end(),
+      [](const Segment& a, const Segment& b) { return a.across < b.across; });
+  std::vector<std::vector<Segment>> lines;
+  for (auto&& seg : segments) {
+    if (lines.empty() || seg.across - lines.back().front().across > tol) {
+      lines.emplace_back();
+    }
+    lines.back().push_back(seg);
+  }
+
+  // Start from the line on the border of the field, cover all its segments
+  // (jumping over the obstacles between them), then go back along the next one
+  std::vector<long long int> route;
+  route.reserve(3 * n_swaths);
+  for (size_t k = 0; k < lines.size(); ++k) {
+    auto& line = lines[k];
+    const bool forward = (k % 2 == 0);
+    std::sort(line.begin(), line.end(), [forward](const Segment& a, const Segment& b) {
+      return forward ? a.along < b.along : a.along > b.along;
+    });
+    for (auto&& seg : line) {
+      route.push_back(forward ? seg.low : seg.high);
+      route.push_back(seg.mid);
+      route.push_back(forward ? seg.high : seg.low);
+    }
+  }
+
+  // Every node but the depot (the last one) must be visited exactly once
+  const size_t n_nodes = cov_graph.numNodes();
+  std::vector<bool> seen(n_nodes, false);
+  for (auto&& id : route) {
+    if (id < 0 || static_cast<size_t>(id) + 1 >= n_nodes || seen[id]) {
+      throw std::runtime_error("SWATH_SNAKE: the swaths don't match the coverage graph");
+    }
+    seen[id] = true;
+  }
+  if (route.size() + 1 != n_nodes) {
+    throw std::runtime_error("SWATH_SNAKE: the route does not visit every node");
+  }
+  std::cout << "SWATH_SNAKE: " << n_swaths << " swaths on " << lines.size() << " lines"
+            << std::endl;
+  return route;
+}
+
 ThreadResult RoutePlannerBase::computeBestRouteCircuit(const F2CGraph2D& cov_graph,
     bool show_log,
     long int time_limit_seconds,
@@ -673,6 +791,7 @@ std::vector<long long int> RoutePlannerBase::computeBestRouteParallel(F2CGraph2D
   data.show_log = show_log;
   data.time_limit_seconds = time_limit_seconds;
   data.use_guided_local_search = use_guided_local_search;
+  data.initial_route = this->initial_route_;
 
   const size_t n_nodes = cov_graph.numNodes();
 
@@ -933,7 +1052,11 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
 
   ortools::RoutingSearchParameters searchParameters = ortools::DefaultRoutingSearchParameters();
   searchParameters.set_use_full_propagation(true);
-  searchParameters.set_first_solution_strategy(config.strategy);
+  const bool swath_snake = (config.strategy == kSwathSnakeStrategy);
+  // kSwathSnakeStrategy is not an or-tools strategy: the first solution is
+  // given to the solver, the strategy in the parameters is not used
+  searchParameters.set_first_solution_strategy(
+      swath_snake ? ortools::FirstSolutionStrategy::AUTOMATIC : config.strategy);
   searchParameters.set_report_intermediate_cp_sat_solutions(true);
 
   // ortools::FirstSolutionStrategy::FIRST_UNBOUND_MIN_VALUE);
@@ -958,7 +1081,31 @@ ThreadResult RoutePlannerBase::RunSingleInitialization(CVrpData& data, SearchCon
       routing.AddLocalSearchFilter(neighbor_filter.get());
     }
   }
-  const ortools::Assignment* solution = routing.SolveWithParameters(searchParameters);
+  const ortools::Assignment* solution = nullptr;
+  if (swath_snake) {
+    const ortools::Assignment* initial = nullptr;
+    if (data.initial_route.empty()) {
+      std::cout << "SWATH_SNAKE: no initial route, set it with setInitialRoute" << std::endl;
+    } else {
+      routing.CloseModelWithParameters(searchParameters);
+      std::vector<std::vector<int64_t>> routes(1);
+      routes[0].reserve(data.initial_route.size());
+      for (auto&& node : data.initial_route) {
+        routes[0].push_back(manager.NodeToIndex(
+            ortools::RoutingIndexManager::NodeIndex(static_cast<int>(node))));
+      }
+      // nullptr if the route uses a forbidden arc (constrained)
+      initial = routing.ReadAssignmentFromRoutes(routes, true);
+      if (initial == nullptr) {
+        std::cout << "SWATH_SNAKE: the initial route is not feasible" << std::endl;
+      }
+    }
+    if (initial != nullptr) {
+      solution = routing.SolveFromAssignmentWithParameters(initial, searchParameters);
+    }
+  } else {
+    solution = routing.SolveWithParameters(searchParameters);
+  }
   // std::cout  << "Routing excuted" <<std::endl;
 
   ThreadResult result;

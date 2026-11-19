@@ -20,6 +20,16 @@
 
 namespace f2c::rp {
 
+/// First solution built from the swaths instead of by an or-tools heuristic.
+///   The swaths are grouped by the line they were cut from: starting from the
+///   line at the border of the field, every segment of a line is covered in
+///   order, jumping over the obstacles that split it, then the route moves to
+///   the next parallel line and runs it in the opposite direction (snake).
+///   The route is given to the solver as the first solution, then improved
+///   by the local search. The value is past the last or-tools strategy
+///   (LOCAL_CHEAPEST_COST_INSERTION = 16), so it is never passed to the solver.
+constexpr int kSwathSnakeStrategy = 17;
+
 class RoutePlannerBase {
  public:
   /// Generate route to cover the swaths on a field.
@@ -43,6 +53,27 @@ class RoutePlannerBase {
 
   /// Set the start and the end of the route.
   void setStartAndEndPoint(const F2CPoint& p);
+
+  /// Set the first solution strategy of the solver: either the value of an
+  ///   or-tools operations_research::FirstSolutionStrategy::Value
+  ///   (default: AUTOMATIC = 15) or kSwathSnakeStrategy.
+  void setFirstSolutionStrategy(int strategy);
+  int getFirstSolutionStrategy() const;
+
+  /// Build the first solution of kSwathSnakeStrategy: the nodes of the
+  ///   coverage graph in visiting order, depot excluded (same format as the
+  ///   route returned by computeBestRoute).
+  ///   Throws if the swaths and the coverage graph don't match.
+  /// @param swaths_by_cells Swaths used to build `cov_graph`
+  /// @param cov_graph Graph from createCoverageGraph (with redirect_swaths)
+  std::vector<long long int> genSwathSnakeRoute(
+      const F2CSwathsByCells& swaths_by_cells,
+      const F2CGraph2D& cov_graph) const;
+
+  /// Set the first solution used by computeBestRoute when the strategy is
+  ///   kSwathSnakeStrategy. genRoute sets it by itself.
+  void setInitialRoute(const std::vector<long long int>& route);
+  const std::vector<long long int>& getInitialRoute() const;
 
   /// Create graph to compute the shortest path between two points
   ///   in the headlands.
@@ -90,6 +121,8 @@ class RoutePlannerBase {
 
  protected:
   std::optional<F2CPoint> r_start_end;
+  int first_solution_strategy_ {15};  // or-tools AUTOMATIC
+  std::vector<long long int> initial_route_;
 };
 
 

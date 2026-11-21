@@ -59,3 +59,4 @@ __pycache__/
 *.egg-info/
 _skbuild/
 .venv/
+instdir/

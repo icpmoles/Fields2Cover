@@ -68,7 +68,14 @@ struct Route {
 
   Route clone() const;
 
-  Path asPath(Robot& robot, bool use_filter, double filter_distance, double filter_alpha);
+  /// Convert the route to a path driven at the cruise speed of the robot.
+  /// @param use_filter Smooth the connections between swaths with
+  ///   MultiPoint::smoothify
+  /// @param filter_distance Distance between the points of the smoothed
+  ///   connections [m]
+  /// @param filter_alpha Smoothing factor of the low-pass filter, in [0, 1]
+  Path asPath(Robot& robot, bool use_filter = false,
+      double filter_distance = 0.1, double filter_alpha = 0.5);
 
  private:
   std::vector<Swaths> v_swaths_;

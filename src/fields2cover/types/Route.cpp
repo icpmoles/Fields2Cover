@@ -6,7 +6,7 @@
 
 #include "fields2cover/types/Route.h"
 
-#include "../../../../f2c_main/include/fields2cover/types.h"
+#include "fields2cover/types.h"
 
 namespace f2c::types {
 
@@ -244,7 +244,9 @@ Path Route::asPath(Robot& robot, bool use_filter, double filter_distance, double
         } else {
           path += Path(this->getConnection(i+1), vel);
         }
-      } else {
+      } else if (i + 1 < v_swaths_.size() && v_swaths_[i].size() > 0 &&
+          v_swaths_[i + 1].size() > 0) {
+        // Empty connection between two swaths: join them with a straight line
         const F2CMultiPoint sw2sw{v_swaths_.at(i).back().endPoint(),
           v_swaths_.at(i+1).at(0).startPoint()};
         path +=   Path(sw2sw, vel);
